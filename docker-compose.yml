@@ -1,0 +1,49 @@
+# Production setup: Caddy (HTTPS) in front of Mensa Finder, on one server.
+#
+#   cp .env.example .env      # then set DOMAIN to your domain
+#   docker compose up --build -d
+#
+# The domain's DNS record must point to this server, and ports 80 and 443 must be open, so
+# Caddy can get the certificate. Menus and photos are kept in the "data" volume, certificates
+# in "caddy_data", so restarts and updates keep both.
+services:
+  mensafinder:
+    build: .
+    environment:
+      REFRESH_EVERY: ${REFRESH_EVERY:-1h}
+    volumes:
+      - data:/data
+    restart: unless-stopped
+    mem_limit: 512m # resizing photos is the biggest user; normal use is far below
+    logging: &logging
+      driver: json-file
+      options: { max-size: 10m, max-file: "3" } # keep logs from filling the disk
+    healthcheck:
+      test: ["CMD", "/mensafinder", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+
+  caddy:
+    image: caddy:2.11.7-alpine # pinned, so an update is a deliberate change here
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      mensafinder:
+        condition: service_healthy
+    restart: unless-stopped
+    mem_limit: 256m
+    logging: *logging
+
+volumes:
+  data:
+  caddy_data:
+  caddy_config:

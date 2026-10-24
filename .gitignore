@@ -1,0 +1,13 @@
+# Menus and photo thumbnails written while running locally
+/data/
+
+# Compiled binary
+/mensafinder
+
+.DS_Store
+.idea/
+.vscode/
+.env
+
+# Local editor and assistant settings
+.claude/

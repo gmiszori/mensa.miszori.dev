@@ -1,0 +1,7 @@
+.git
+.claude
+data
+design
+*.md
+docs
+.env

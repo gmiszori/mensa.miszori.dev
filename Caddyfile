@@ -1,0 +1,20 @@
+# Caddy is the public web server: it answers on ports 80 and 443, gets and renews the HTTPS
+# certificate for DOMAIN by itself (from Let's Encrypt), compresses responses and passes every
+# request on to Mensa Finder, which is only reachable inside the Docker network.
+#
+# DOMAIN comes from the .env file next to docker-compose.yml. Without it, Caddy serves
+# https://localhost with its own local certificate, for trying the setup out.
+{$DOMAIN:localhost} {
+	encode zstd gzip
+
+	# Tell browsers to use only HTTPS for this domain from now on (for a year). Not for
+	# localhost, where it would also break plain-HTTP development servers.
+	@public not host localhost
+	header @public Strict-Transport-Security "max-age=31536000"
+
+	# One line per request on stdout, so `docker compose logs caddy` shows the traffic.
+	# Caddy leaves cookies and authorization headers out of these logs.
+	log
+
+	reverse_proxy mensafinder:8080
+}

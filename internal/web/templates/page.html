@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="{{.Lang}}"{{if ne .Theme "system"}} data-theme="{{.Theme}}"{{end}}>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Mensa Finder</title>
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/app.css?v={{.Version}}">
+  <script src="/static/app.js?v={{.Version}}" defer></script>
+</head>
+<body data-date="{{.Date}}" data-today="{{.IsToday}}" data-meal="{{.Meal}}" data-texts="{{.JSTexts}}">
+<svg width="0" height="0" class="icons" aria-hidden="true">
+  <symbol id="i-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+</svg>
+
+<div class="container">
+  <header class="site-header">
+    <a class="brand" href="/">Mensa <span>Finder</span></a>
+    <button class="icon-btn" type="button" id="open-settings" aria-label="{{call .T "settings"}}"><svg><use href="#i-settings"/></svg></button>
+  </header>
+</div>
+
+<div class="toolbar">
+  <div class="container toolbar-inner">
+    <input class="search" id="search" type="search" placeholder="{{call .T "search"}}" autocomplete="off">
+    <div class="when">
+      <button class="when-button" type="button" id="when" aria-expanded="false" aria-controls="when-panel" aria-label="{{call .T "day"}}, {{call .T "meal"}}" data-day="{{.DayLabel}}">
+        <svg><use href="#i-calendar"/></svg><span id="when-label">{{.DayLabel}} · {{if eq .Meal "dinner"}}{{call .T "dinner"}}{{else}}{{call .T "lunch"}}{{end}}</span>
+      </button>
+      <div class="when-panel" id="when-panel" hidden>
+        <div class="segmented" role="group" aria-label="{{call .T "meal"}}">
+          <button type="button" data-meal-button="lunch">{{call .T "lunch"}}</button>
+          <button type="button" data-meal-button="dinner">{{call .T "dinner"}}</button>
+        </div>
+        {{if .Days}}
+        <nav class="day-list" aria-label="{{call .T "day"}}">
+          {{range .Days}}<a class="chip" href="/?day={{.Date}}" data-day-link{{if .Selected}} aria-current="page"{{end}}>{{.Label}}</a>{{end}}
+        </nav>
+        {{end}}
+      </div>
+    </div>
+  </div>
+</div>
+
+<main class="container">
+  {{if .Notice}}<p class="notice">{{.Notice}}</p>{{end}}
+  <p class="notice" id="starred-hits" hidden></p>
+  <p class="notice" id="hidden-count" hidden></p>
+
+  <div class="canteens" id="canteens">
+    {{range .Canteens}}
+    <section class="canteen" data-order="{{.Order}}" data-id="{{.ID}}" data-campus="{{.Campus}}" data-hours="{{.Hours}}" data-name="{{.Name}}">
+      <div class="canteen-head">
+        <button class="star" type="button" data-favourite aria-pressed="{{.Favourite}}" aria-label="{{call $.T "favourite"}}: {{.Name}}"><svg><use href="#i-star"/></svg></button>
+        <div class="canteen-title">
+          <h2>{{.Name}}</h2>
+          <div class="canteen-meta">
+            <a href="{{.MapURL}}" target="_blank" rel="noopener" title="{{call $.T "map"}}">{{.CampusName}}</a>
+            {{- range .Meals}}{{if and .From .Dishes}}<span data-for-meal="{{.Kind}}"> · {{.From}}–{{.To}}</span>{{end}}{{end -}}
+          </div>
+        </div>
+        {{if .Status}}<span class="status {{.Status}}" data-status>{{if eq .Status "open"}}{{call $.T "open"}}{{else}}{{call $.T "closed"}}{{end}}</span>{{end}}
+      </div>
+      {{range .Meals}}
+      <ul class="dishes" data-meal="{{.Kind}}">
+        {{range .Dishes}}
+        <li class="dish" data-order="{{.Order}}" data-diet="{{.Diet}}" data-allergens="{{.AllergenIDs}}" data-search="{{.Search}}" data-name="{{.Name}}"
+            data-student="{{price .Prices.Student}}" data-staff="{{price .Prices.Staff}}" data-external="{{price .Prices.External}}"{{if .Starred}} data-starred{{end}}>
+          <details>
+            <summary class="dish-row{{if .Photo}} has-photo{{end}}">
+              {{if .Photo}}<img class="thumb" src="/photos/{{.Photo}}.jpg" alt="" loading="lazy" width="56" height="56">
+              <img class="photo" data-src="/photos/{{.Photo}}-large.jpg" alt="" hidden>{{end}}
+              <span class="dish-name"><span class="starred-mark" aria-hidden="true">★ </span>{{.Name}}</span>
+              <span class="price"><span class="price-value">{{price .Price}}</span>{{if .Per100g}}<small>/100g</small>{{end}}</span>
+              <span class="dish-desc">{{.Description}}</span>
+              <span class="dish-tags">{{if .DietLabel}}<span class="tag">{{.DietLabel}}</span>{{end}}</span>
+            </summary>
+            <dl class="dish-detail">
+              {{if .Description}}<dt>{{call $.T "with"}}</dt><dd>{{.Description}}</dd>{{end}}
+              <dt>{{call $.T "allergens"}}</dt><dd>{{or .Allergens (call $.T "noAllergens")}}</dd>
+              <dt>{{call $.T "prices"}}</dt>
+              <dd class="prices">{{call $.T "student"}} {{price .Prices.Student}} · {{call $.T "staff"}} {{price .Prices.Staff}} · {{call $.T "external"}} {{price .Prices.External}}</dd>
+              <dd class="actions"><button class="chip" type="button" data-star aria-pressed="{{.Starred}}">{{if .Starred}}★ {{call $.T "starred"}}{{else}}☆ {{call $.T "star"}}{{end}}</button></dd>
+            </dl>
+          </details>
+        </li>
+        {{end}}
+      </ul>
+      {{end}}
+    </section>
+    {{end}}
+  </div>
+  <p class="empty" id="no-results" hidden>{{call .T "noResults"}}</p>
+
+  <details class="no-menu" id="no-menu">
+    <summary></summary>
+    <ul>
+      {{range .Canteens}}<li data-for="{{.ID}}" data-campus="{{.Campus}}" hidden>{{.Name}}</li>{{end}}
+      {{range .NoMenu}}<li data-for="{{.ID}}" data-campus="{{.Campus}}" data-always>{{.Name}}</li>{{end}}
+    </ul>
+  </details>
+</main>
+
+<footer class="container site-footer">{{.Footer}}</footer>
+
+<dialog class="sheet" id="settings">
+  <div class="sheet-head">
+    <h2>{{call .T "settings"}}</h2>
+    <button class="icon-btn" type="button" id="close-settings" aria-label="{{call .T "close"}}"><svg><use href="#i-x"/></svg></button>
+  </div>
+  <div class="setting">
+    <h3>{{call .T "setPrices"}}</h3>
+    <div class="segmented" data-setting="price">
+      <button type="button" value="student" aria-pressed="{{eq .Price "student"}}">{{call .T "student"}}</button>
+      <button type="button" value="staff" aria-pressed="{{eq .Price "staff"}}">{{call .T "staff"}}</button>
+      <button type="button" value="external" aria-pressed="{{eq .Price "external"}}">{{call .T "external"}}</button>
+    </div>
+  </div>
+  <div class="setting">
+    <h3>{{call .T "setCampuses"}}</h3>
+    <p>{{call .T "setCampusesHelp"}}</p>
+    <div class="wrap" data-setting="campuses">
+      {{range .Campuses}}<button class="chip" type="button" value="{{.ID}}" aria-pressed="{{.On}}">{{.Name}}</button>{{end}}
+    </div>
+  </div>
+  <div class="setting">
+    <h3>{{call .T "setDiet"}}</h3>
+    <div class="segmented" data-setting="diet">
+      <button type="button" value="" aria-pressed="{{eq .Diet ""}}">{{call .T "dietAll"}}</button>
+      <button type="button" value="vegetarian" aria-pressed="{{eq .Diet "vegetarian"}}">{{call .T "vegetarian"}}</button>
+      <button type="button" value="vegan" aria-pressed="{{eq .Diet "vegan"}}">{{call .T "vegan"}}</button>
+    </div>
+  </div>
+  <div class="setting">
+    <h3>{{call .T "setOpenNow"}}</h3>
+    <p>{{call .T "setOpenNowHelp"}}</p>
+    <div class="segmented" data-setting="open">
+      <button type="button" value="" aria-pressed="{{not .OpenNow}}">{{call .T "off"}}</button>
+      <button type="button" value="1" aria-pressed="{{.OpenNow}}">{{call .T "on"}}</button>
+    </div>
+  </div>
+  <div class="setting">
+    <h3>{{call .T "setAllergens"}}</h3>
+    <div class="wrap" data-setting="hide">
+      {{range .Allergens}}<button class="chip" type="button" value="{{.ID}}" aria-pressed="{{.On}}">{{.Name}}</button>{{end}}
+    </div>
+  </div>
+  <div class="setting">
+    <h3>{{call .T "setStarred"}}</h3>
+    <p>{{call .T "setStarredHelp"}}</p>
+    <div class="wrap" data-setting="star">
+      {{range .Starred}}<button class="chip" type="button" value="{{.}}" aria-pressed="true">{{.}} ✕</button>{{end}}
+      <p data-none{{if .Starred}} hidden{{end}}>{{call .T "setNoStarred"}}</p>
+    </div>
+  </div>
+  <div class="setting">
+    <h3>{{call .T "setLanguage"}}</h3>
+    <div class="segmented" data-setting="lang">
+      <button type="button" value="en" aria-pressed="{{eq .Lang "en"}}">English</button>
+      <button type="button" value="de" aria-pressed="{{eq .Lang "de"}}">Deutsch</button>
+    </div>
+  </div>
+  <div class="setting">
+    <h3>{{call .T "setTheme"}}</h3>
+    <div class="segmented" data-setting="theme">
+      <button type="button" value="system" aria-pressed="{{eq .Theme "system"}}">{{call .T "themeSystem"}}</button>
+      <button type="button" value="light" aria-pressed="{{eq .Theme "light"}}">{{call .T "themeLight"}}</button>
+      <button type="button" value="dark" aria-pressed="{{eq .Theme "dark"}}">{{call .T "themeDark"}}</button>
+    </div>
+  </div>
+</dialog>
+</body>
+</html>

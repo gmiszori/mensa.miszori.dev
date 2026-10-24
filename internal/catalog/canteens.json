@@ -1,0 +1,98 @@
+{
+  "campuses": [
+    { "id": "zentrum", "name": "Zentrum" },
+    { "id": "hoenggerberg", "name": "Hönggerberg" },
+    { "id": "irchel", "name": "Irchel" },
+    { "id": "oerlikon", "name": "Oerlikon" },
+    { "id": "toni-areal", "name": "Toni-Areal" },
+    { "id": "europaallee", "name": "Europaallee" },
+    { "id": "basel", "name": "Basel" }
+  ],
+  "canteens": [
+    { "id": "polyterrasse", "name": "Mensa Polyterrasse", "campus": "zentrum", "address": "Leonhardstrasse 34, 8092 Zürich", "lat": 47.3762048, "lng": 8.5467367, "eth": 9 },
+    { "id": "archimedes", "name": "Archimedes", "campus": "zentrum", "address": "Gloriastrasse 37/39, 8092 Zürich", "lat": 47.3746941, "lng": 8.5497582, "eth": 8 },
+    { "id": "clausiusbar", "name": "Clausiusbar", "campus": "zentrum", "address": "Tannenstrasse 3, 8006 Zürich", "lat": 47.3776789, "lng": 8.5467276, "eth": 3 },
+    { "id": "dozentenfoyer", "name": "Dozentenfoyer", "campus": "zentrum", "address": "Rämistrasse 101, 8092 Zürich", "lat": 47.3764545, "lng": 8.5481666, "eth": 5 },
+    { "id": "food-and-lab", "name": "food&lab", "campus": "zentrum", "address": "Universitätsstrasse 6, 8092 Zürich", "lat": 47.378314, "lng": 8.548805, "eth": 7 },
+    { "id": "polysnack", "name": "Polysnack", "campus": "zentrum", "address": "Rämistrasse 101, 8092 Zürich", "lat": 47.3764545, "lng": 8.5481666, "eth": 10 },
+    { "id": "tannenbar", "name": "Tannenbar", "campus": "zentrum", "address": "Tannenstrasse 7, 8092 Zürich", "lat": 47.3773695, "lng": 8.5477938, "eth": 11 },
+
+    { "id": "uzh-untere-mensa", "name": "Untere Mensa", "campus": "zentrum", "address": "Künstlergasse 10, 8001 Zürich", "lat": 47.373997, "lng": 8.548252,
+      "lunch": "11:00-14:30", "dinner": "17:00-19:00",
+      "food2050": [
+        { "url": "https://app.food2050.ch/de/zfv/universitat-zurich,campus-zentrum/untere-mensa/mittagsverpflegung/menu/weekly", "meal": "lunch" },
+        { "url": "https://app.food2050.ch/de/zfv/universitat-zurich,campus-zentrum/untere-mensa/abendverpflegung/menu/weekly", "meal": "dinner" }
+      ] },
+    { "id": "uzh-obere-mensa", "name": "Obere Mensa", "campus": "zentrum", "address": "Künstlergasse 10, 8001 Zürich", "lat": 47.373997, "lng": 8.548252,
+      "lunch": "11:00-14:30",
+      "food2050": [ { "url": "https://app.food2050.ch/de/zfv/universitat-zurich,campus-zentrum/obere-mensa/lunch/menu/weekly", "meal": "lunch" } ] },
+    { "id": "uzh-platte-14", "name": "Platte 14", "campus": "zentrum", "address": "Plattenstrasse 14/20, 8032 Zürich", "lat": 47.3740968, "lng": 8.5526502,
+      "lunch": "11:00-13:30",
+      "food2050": [ { "url": "https://app.food2050.ch/de/zfv/universitat-zurich,platte-14/platte-14/mittagsverpflegung/menu/weekly", "meal": "lunch" } ] },
+    { "id": "uzh-raemi-59", "name": "Rämi 59", "campus": "zentrum", "address": "Rämistrasse 59, 8001 Zürich", "lat": 47.3720996, "lng": 8.5498961,
+      "lunch": "11:00-14:00",
+      "food2050": [ { "url": "https://app.food2050.ch/de/zfv/universitat-zurich,rami-59/rami-59/mittagsverpflegung/menu/weekly", "meal": "lunch" } ] },
+    { "id": "uzh-insieme", "name": "Insieme Rämi 74", "campus": "zentrum", "address": "Rämistrasse 74, 8001 Zürich", "lat": 47.3746, "lng": 8.5507,
+      "lunch": "11:00-14:00",
+      "food2050": [ { "url": "https://app.food2050.ch/de/zfv/universitat-zurich,platte-14/insieme/mittagsverpflegung/menu/weekly", "meal": "lunch" } ] },
+    { "id": "uzh-zzm", "name": "Cafeteria ZZM", "campus": "zentrum", "address": "Plattenstrasse 11, 8032 Zürich", "lat": 47.374583, "lng": 8.552949,
+      "lunch": "11:00-13:45",
+      "food2050": [ { "url": "https://app.food2050.ch/de/zfv/universitat-zurich,zentrum-fur-zahnmedizin/zzm/mittagsverpflegung/menu/weekly", "meal": "lunch" } ] },
+    { "id": "botanischer-garten", "name": "Cafeteria Botanischer Garten", "campus": "zentrum", "address": "Zollikerstrasse 107, 8008 Zürich", "lat": 47.3585, "lng": 8.5615,
+      "lunch": "11:30-14:00",
+      "food2050": [ { "url": "https://app.food2050.ch/de/zfv/universitat-zurich,botanischer-garten/botanischer-garten/mittagsverpflegung/menu/weekly", "meal": "lunch" } ] },
+
+    { "id": "alumni-quattro-lounge", "name": "Alumni quattro Lounge", "campus": "hoenggerberg", "address": "Stefano-Franscini-Platz 5, 8093 Zürich", "lat": 47.4090543, "lng": 8.5067286, "eth": 14 },
+    { "id": "food-market", "name": "food market", "campus": "hoenggerberg", "address": "Joseph-von-Deschwanden-Platz 1, 8093 Zürich", "lat": 47.4075692, "lng": 8.509271, "eth": 19 },
+    { "id": "fusion-meal", "name": "FUSION meal", "campus": "hoenggerberg", "address": "Vladimir-Prelog-Weg 10, 8093 Zürich", "lat": 47.4076593, "lng": 8.5072024, "eth": 20 },
+    { "id": "mendokoro", "name": "Mendokoro", "campus": "hoenggerberg", "address": "Wolfgang-Pauli-Strasse 14, 8093 Zürich", "lat": 47.4083407, "lng": 8.5080154, "eth": 16 },
+    { "id": "rice-up", "name": "Rice Up!", "campus": "hoenggerberg", "address": "Wolfgang-Pauli-Strasse 27, 8093 Zürich", "lat": 47.4103394, "lng": 8.5081269, "eth": 22 },
+
+    { "id": "uzh-mensa-irchel", "name": "Mensa Irchel", "campus": "irchel", "address": "Winterthurerstrasse 190, 8057 Zürich", "lat": 47.3971646, "lng": 8.5482446,
+      "lunch": "11:00-14:00",
+      "food2050": [ { "url": "https://app.food2050.ch/de/zfv/universitat-zurich,campus-irchel/mensa/mittagsverpflegung/menu/weekly", "meal": "lunch" } ] },
+    { "id": "uzh-seerose", "name": "Cafeteria Seerose", "campus": "irchel", "address": "Winterthurerstrasse 190, 8057 Zürich", "lat": 47.397042, "lng": 8.548243,
+      "lunch": "11:30-13:00", "dinner": "17:00-19:30",
+      "food2050": [
+        { "url": "https://app.food2050.ch/de/zfv/universitat-zurich,campus-irchel/seerose/mittag/menu/weekly", "meal": "lunch" },
+        { "url": "https://app.food2050.ch/de/zfv/universitat-zurich,campus-irchel/seerose/abend/menu/weekly", "meal": "dinner" }
+      ] },
+    { "id": "uzh-green-kitchen-lab", "name": "Green Kitchen Lab", "campus": "irchel", "address": "Winterthurerstrasse 190, 8057 Zürich", "lat": 47.396928, "lng": 8.54928,
+      "lunch": "11:00-14:00",
+      "food2050": [ { "url": "https://app.food2050.ch/de/zfv/universitat-zurich,campus-irchel/green-kitchen-lab/mittagsverpflegung/menu/weekly", "meal": "lunch" } ] },
+    { "id": "the-yard", "name": "The YARD", "campus": "irchel", "address": "Winterthurerstrasse 190, 8057 Zürich", "lat": 47.397, "lng": 8.549,
+      "lunch": "11:30-14:00",
+      "food2050": [ { "url": "https://app.food2050.ch/de/zfv/universitat-zurich,campus-irchel,ks-oerlikon/the-yard/mittagsverpflegung/menu/weekly", "meal": "lunch" } ] },
+    { "id": "tierspital", "name": "Mensa Tierspital", "campus": "irchel", "address": "Winterthurerstrasse 260, 8057 Zürich", "lat": 47.3995, "lng": 8.5535,
+      "lunch": "11:15-14:00",
+      "food2050": [ { "url": "https://app.food2050.ch/de/zfv/universitat-zurich,tierspital-1/tierspital/mittagsverpflegung/menu/weekly", "meal": "lunch" } ] },
+
+    { "id": "octavo", "name": "Restaurant Octavo", "campus": "oerlikon", "address": "Binzmühlestrasse 130, 8050 Zürich", "lat": 47.415, "lng": 8.548, "eth": 23 },
+    { "id": "mensa-binzmuhle", "name": "Mensa Binzmühle", "campus": "oerlikon", "address": "Binzmühlestrasse 14, 8050 Zürich", "lat": 47.4128, "lng": 8.5442,
+      "lunch": "11:15-14:00",
+      "food2050": [ { "url": "https://app.food2050.ch/de/zfv/universitat-zurich,campus-oerlikon/mensa-binzmuhle/mittagsverpflegung/menu/weekly", "meal": "lunch" } ] },
+    { "id": "bim11", "name": "BIM11", "campus": "oerlikon", "address": "Binzmühlestrasse 11, 8050 Zürich", "lat": 47.4125, "lng": 8.544,
+      "lunch": "11:30-14:00",
+      "food2050": [ { "url": "https://app.food2050.ch/de/zfv/universitat-zurich,campus-oerlikon/bim11/mittagsverpflegung/menu/weekly", "meal": "lunch" } ] },
+    { "id": "cityport", "name": "Mensa Cityport", "campus": "oerlikon", "address": "Affolternstrasse 56, 8050 Zürich", "lat": 47.414, "lng": 8.543,
+      "lunch": "11:15-13:30",
+      "food2050": [ { "url": "https://app.food2050.ch/de/zfv/universitat-zurich,cityport/cityport/mittagsverpflegung/menu/weekly", "meal": "lunch" } ] },
+
+    { "id": "molki", "name": "Mensa Molki", "campus": "toni-areal", "address": "Pfingstweidstrasse 96, 8005 Zürich", "lat": 47.3908, "lng": 8.5126,
+      "lunch": "11:00-14:00",
+      "food2050": [ { "url": "https://app.food2050.ch/de/zfv/zhdk,toni-areal/mensa-molki/mittagsverpflegung/menu/weekly", "meal": "lunch" } ] },
+    { "id": "bistro-tonino", "name": "Bistro Tonino", "campus": "toni-areal", "address": "Pfingstweidstrasse 96, 8005 Zürich", "lat": 47.391, "lng": 8.513,
+      "lunch": "11:00-14:00",
+      "food2050": [ { "url": "https://app.food2050.ch/de/zfv/zhdk,toni-areal/bistro-tonino/mittagsverpflegung/menu/weekly", "meal": "lunch" } ] },
+
+    { "id": "phzh", "name": "Mensa PHZH", "campus": "europaallee", "address": "Lagerstrasse 2, 8004 Zürich", "lat": 47.3785, "lng": 8.533,
+      "lunch": "11:15-14:00",
+      "food2050": [ { "url": "https://app.food2050.ch/de/phzh/mensa-phzh/menu/mittagsmenue/weekly", "meal": "lunch" } ] },
+    { "id": "sihlhof", "name": "ZHAW Sihlhof", "campus": "europaallee", "address": "Lagerstrasse 41, 8004 Zürich", "lat": 47.3778, "lng": 8.5298,
+      "lunch": "11:30-14:00",
+      "food2050": [ { "url": "https://app.food2050.ch/de/sihlhof/sihlhof/menu/mittagsmenue/weekly", "meal": "lunch" } ] },
+
+    { "id": "science-lounge", "name": "Science Lounge", "campus": "basel", "address": "Klingelbergstrasse 48, 4056 Basel", "lat": 47.563, "lng": 7.579, "eth": 27 },
+    { "id": "flavour-kitchen", "name": "Flavour Kitchen", "campus": "basel", "address": "Klingelbergstrasse 48, 4056 Basel", "lat": 47.563, "lng": 7.579, "eth": 28 }
+  ]
+}
