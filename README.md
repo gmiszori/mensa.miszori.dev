@@ -79,6 +79,7 @@ Browser ─► proxy ─► Caddy (HTTPS) ─► Mensa Finder ◄─────
 | `internal/refresh/` | Runs both sources on a timer and writes into the store. |
 | `internal/photos/` | Downloads, resizes and caches dish photos. It serves only photos of dishes on the menus. |
 | `internal/web/` | The web server: routes, the settings cookie, all texts in English and German, the page template, and `static/` (CSS, JavaScript, fonts). |
+| `docs/` | The demo GIF, and `og-image.html`, the source of the image shown when a link to the site is shared. |
 
 Routes: `/` is the page (`?day=YYYY-MM-DD&meal=lunch|dinner`).
 `/photos/<key>.jpg` and `/photos/<key>-large.jpg` serve photos. `/api/menu?day=YYYY-MM-DD`

@@ -62,6 +62,7 @@ func (s *Server) home(w http.ResponseWriter, r *http.Request) {
 	settings := readSettings(r)
 	q := r.URL.Query()
 	data := s.buildPage(settings, q.Get("day"), q.Get("meal"), time.Now().In(s.Zone))
+	data.SiteURL = siteURL(r)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store") // menus and settings change; always render fresh
 	if err := s.page.Execute(w, data); err != nil {
@@ -117,6 +118,7 @@ type pageData struct {
 	OpenNow            bool
 	T                  func(key string, args ...any) string
 	Version            string // appended to CSS and JS links, so browsers fetch new versions
+	SiteURL            string // e.g. "https://mensa.miszori.dev", for link previews
 
 	Date      string // the day shown, YYYY-MM-DD
 	IsToday   bool
@@ -392,6 +394,17 @@ func formatPrice(f float64) string {
 		return "–"
 	}
 	return fmt.Sprintf("%.2f", f)
+}
+
+// siteURL is the address visitors use, e.g. "https://mensa.miszori.dev". Link previews
+// (Open Graph) need absolute URLs. In production Caddy passes the visitor's host and sets
+// X-Forwarded-Proto itself (it ignores values sent by visitors).
+func siteURL(r *http.Request) string {
+	scheme := "http"
+	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+		scheme = "https"
+	}
+	return scheme + "://" + r.Host
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

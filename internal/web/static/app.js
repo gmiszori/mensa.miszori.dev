@@ -322,6 +322,12 @@
     return Math.max(0, Math.min(max, window.scrollY + rect.top - offset));
   }
 
+  // Touching or scrolling during the animation hands the scrolling back to the user.
+  let userScrolled = false;
+  for (const type of ['touchstart', 'wheel']) {
+    window.addEventListener(type, () => { userScrolled = true; }, { passive: true });
+  }
+
   async function toggleDish(details) {
     if (animating) return;
     const opening = details.open ? null : details;
@@ -329,11 +335,12 @@
     const thumbRect = opening?.querySelector('.thumb')?.getBoundingClientRect();
     const photoReady = opening ? await loadPhoto(opening, 400) : false;
     animating = true;
+    userScrolled = false;
 
     const dishes = [opening, closing].filter(Boolean);
     const startHeight = new Map(dishes.map((d) => [d, d.offsetHeight]));
     const anchor = opening?.closest('.dish');
-    const anchorStart = anchor?.getBoundingClientRect().top;
+    const scrollStart = window.scrollY;
 
     // Lay out the end state, measure it, then go back to the start and animate in between.
     const closingExpanded = closing?.classList.contains('expanded');
@@ -346,8 +353,7 @@
       setExpanded(opening, photoReady);
     }
     const endHeight = new Map(dishes.map((d) => [d, d.offsetHeight]));
-    const target = anchor ? centredScroll(anchor) : window.scrollY;
-    const anchorEnd = anchor ? anchor.getBoundingClientRect().top - (target - window.scrollY) : 0;
+    const target = anchor ? Math.round(centredScroll(anchor)) : window.scrollY;
 
     const finish = () => {
       for (const d of dishes) {
@@ -393,12 +399,13 @@
       const p = Math.min(1, (now - start) / DURATION);
       const e = ease(p);
       for (const d of dishes) {
-        d.style.height = `${startHeight.get(d) + (endHeight.get(d) - startHeight.get(d)) * e}px`;
+        d.style.height = `${Math.round(startHeight.get(d) + (endHeight.get(d) - startHeight.get(d)) * e)}px`;
       }
-      // Keep the opened dish gliding steadily towards the centre, whatever moves above it.
-      if (anchor) {
-        const wanted = anchorStart + (anchorEnd - anchorStart) * e;
-        window.scrollBy(0, anchor.getBoundingClientRect().top - wanted);
+      // Scroll along the same curve as the heights change, so the opened dish glides to the
+      // centre. The scroll position is computed, never measured: on iPhones the page reports
+      // its position a frame late, and correcting by measurement made the page shake.
+      if (anchor && !userScrolled) {
+        window.scrollTo(0, Math.round(scrollStart + (target - scrollStart) * e));
       }
       if (p < 1) {
         requestAnimationFrame(step);

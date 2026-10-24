@@ -10,6 +10,8 @@ import (
 var texts = map[string]map[string]string{
 	"en": {
 		"search":          "Search dishes",
+		"pageTitle":       "Mensa Finder: ETH and UZH menus in Zurich",
+		"pageDescription": "Today's menus of 34 canteens at ETH, UZH and around Zurich on one page, with prices, photos and allergens. Filter for vegetarian and vegan, star your favourites.",
 		"settings":        "Settings",
 		"close":           "Close",
 		"day":             "Day",
@@ -23,7 +25,6 @@ var texts = map[string]map[string]string{
 		"favourite":       "Favourite",
 		"star":            "Star dish",
 		"starred":         "Starred",
-		"with":            "With",
 		"allergens":       "Allergens",
 		"noAllergens":     "None declared",
 		"prices":          "Prices",
@@ -61,6 +62,8 @@ var texts = map[string]map[string]string{
 	},
 	"de": {
 		"search":          "Gerichte suchen",
+		"pageTitle":       "Mensa Finder: Menüs der ETH- und UZH-Mensen in Zürich",
+		"pageDescription": "Die heutigen Menüs von 34 Mensen der ETH, UZH und in Zürich auf einer Seite, mit Preisen, Fotos und Allergenen. Vegetarisch und vegan filtern, Favoriten markieren.",
 		"settings":        "Einstellungen",
 		"close":           "Schliessen",
 		"day":             "Tag",
@@ -74,7 +77,6 @@ var texts = map[string]map[string]string{
 		"favourite":       "Favorit",
 		"star":            "Gericht markieren",
 		"starred":         "Markiert",
-		"with":            "Mit",
 		"allergens":       "Allergene",
 		"noAllergens":     "Keine deklariert",
 		"prices":          "Preise",

@@ -192,6 +192,8 @@ details.expanded .dish-row.has-photo { grid-template-columns: 1fr auto; }
 .dish[data-starred] .starred-mark { display: inline; }
 .dish-name, .dish-desc { min-width: 0; }
 .dish-desc { color: var(--text-sub); font-size: 0.85rem; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* An opened dish shows its whole description, over as many lines as it needs. */
+.dish details[open] .dish-desc { white-space: normal; overflow: visible; }
 .price { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 0.9rem; font-weight: 500; text-align: right; white-space: nowrap; }
 .price small { font-size: inherit; color: var(--text-sub); }
 .dish-tags { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
@@ -211,11 +213,16 @@ details.expanded .dish-row.has-photo { grid-template-columns: 1fr auto; }
 /* ---------- Settings sheet ---------- */
 dialog.sheet {
   margin: auto auto 0; width: 100%; max-width: 640px; max-height: 90vh; border: 1px solid var(--border);
-  border-radius: var(--radius-md) var(--radius-md) 0 0; background: var(--bg); color: var(--text); padding: 20px 16px 32px;
+  border-radius: var(--radius-md) var(--radius-md) 0 0; background: var(--bg); color: var(--text); padding: 0 16px 32px;
+  overflow-y: auto; overscroll-behavior: contain;
 }
 @media (min-width: 700px) { dialog.sheet { margin: auto; border-radius: var(--radius-md); } }
 dialog.sheet::backdrop { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); }
-.sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+/* The title and close button stay at the top while the settings scroll beneath them. */
+.sheet-head {
+  position: sticky; top: 0; z-index: 1; background: var(--bg);
+  display: flex; justify-content: space-between; align-items: center; padding: 20px 0 12px;
+}
 .sheet h2 { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; }
 .setting { padding: 14px 0; border-top: 1px solid var(--border); display: grid; gap: 10px; }
 .setting:first-of-type { border-top: 0; }

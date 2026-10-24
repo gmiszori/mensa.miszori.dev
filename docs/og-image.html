@@ -1,0 +1,69 @@
+<!doctype html>
+<!-- Source of internal/web/static/og.png, the image shown when a link to the site is shared.
+     To regenerate it, take a 1200x630 screenshot of this page in a browser. -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+@font-face { font-family: 'Inter Variable'; src: url('../internal/web/static/fonts/inter-latin-wght-normal.woff2') format('woff2'); font-weight: 100 900; }
+@font-face { font-family: 'JetBrains Mono Variable'; src: url('../internal/web/static/fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2'); font-weight: 100 800; }
+:root {
+  --bg: #ffffff; --border: rgba(15, 23, 42, 0.1); --text: #000; --text-muted: #2c3441; --text-sub: #6a7585;
+  --accent: #4f46e5; --end: #9333ea; --pill: rgba(0, 0, 0, 0.05);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1200px; height: 630px; overflow: hidden; }
+body {
+  background: var(--bg); color: var(--text); font-family: 'Inter Variable', sans-serif;
+  position: relative; display: flex; align-items: center; padding: 0 72px; gap: 56px;
+}
+.glow { position: absolute; top: -260px; right: -220px; width: 760px; height: 760px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(79, 70, 229, 0.16), transparent 68%); }
+.glow.b { top: auto; right: auto; bottom: -360px; left: -260px; background: radial-gradient(circle, rgba(147, 51, 234, 0.08), transparent 68%); }
+.left { position: relative; flex: 1; display: flex; flex-direction: column; gap: 26px; }
+.logo { display: flex; align-items: center; gap: 16px; }
+.logo svg { width: 64px; height: 64px; }
+h1 { font-size: 76px; font-weight: 800; letter-spacing: -0.035em; line-height: 1; }
+h1 span { background: linear-gradient(135deg, var(--accent), var(--end)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lede { font-size: 31px; line-height: 1.35; color: var(--text-muted); font-weight: 500; letter-spacing: -0.01em; max-width: 560px; }
+.pills { display: flex; gap: 10px; flex-wrap: wrap; }
+.pill { font-family: 'JetBrains Mono Variable', monospace; font-size: 19px; color: var(--accent); background: rgba(79, 70, 229, 0.06);
+  border: 1px solid rgba(79, 70, 229, 0.22); border-radius: 999px; padding: 6px 16px; }
+.url { font-family: 'JetBrains Mono Variable', monospace; font-size: 22px; color: var(--text-sub); }
+
+.card { position: relative; width: 430px; background: #fff; border: 1px solid var(--border); border-radius: 22px;
+  box-shadow: 0 30px 60px -20px rgba(15, 23, 42, 0.25); padding: 26px 26px 10px; transform: rotate(2deg); }
+.head { display: flex; align-items: center; gap: 10px; }
+.head svg { width: 22px; height: 22px; fill: var(--accent); }
+.head h2 { font-size: 25px; font-weight: 700; letter-spacing: -0.02em; }
+.meta { font-family: 'JetBrains Mono Variable', monospace; font-size: 15px; color: var(--text-sub); margin: 4px 0 8px 32px; }
+.dish { display: grid; grid-template-columns: 1fr auto; gap: 3px 12px; padding: 13px 0; border-top: 1px solid var(--border); }
+.dish:first-of-type { border-top: 0; }
+.name { font-weight: 600; font-size: 19px; }
+.name b { color: var(--accent); }
+.desc { color: var(--text-sub); font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.price { font-family: 'JetBrains Mono Variable', monospace; font-size: 18px; font-weight: 500; text-align: right; }
+.tag { justify-self: end; font-family: 'JetBrains Mono Variable', monospace; font-size: 13px; background: var(--border); padding: 1px 8px; border-radius: 6px; }
+</style>
+</head>
+<body>
+<div class="glow"></div><div class="glow b"></div>
+<div class="left">
+  <div class="logo">
+    <svg viewBox="0 0 32 32"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f46e5"/><stop offset="1" stop-color="#9333ea"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#g)"/><circle cx="16" cy="16" r="8" fill="none" stroke="#fff" stroke-width="2.5"/><circle cx="16" cy="16" r="3.5" fill="#fff"/></svg>
+    <h1>Mensa <span>Finder</span></h1>
+  </div>
+  <p class="lede">Today's menus of the ETH and UZH canteens in Zurich, on one page.</p>
+  <div class="pills"><span class="pill">34 canteens</span><span class="pill">prices</span><span class="pill">photos</span><span class="pill">allergens</span></div>
+  <p class="url">mensa.miszori.dev</p>
+</div>
+<div class="card">
+  <div class="head"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><h2>Mensa Polyterrasse</h2></div>
+  <div class="meta">Zentrum · 11:15–14:00</div>
+  <div class="dish"><span class="name"><b>★</b> Seitan Stroganoff</span><span class="price">7.00</span><span class="desc">Mushrooms, Hot peppers, Bell pepper sauce</span><span class="tag">vegan</span></div>
+  <div class="dish"><span class="name">Eggplant Parmigiana</span><span class="price">7.00</span><span class="desc">Eggplant, Mozzarella, Tomatoes, Basil</span><span class="tag">vegetarian</span></div>
+  <div class="dish"><span class="name">Taiwanese-Style Noodles</span><span class="price">8.50</span><span class="desc">Wheat noodles, Soy sauce, Sesame seeds</span><span class="tag">meat</span></div>
+  <div class="dish"><span class="name">Cream of Parsnip Soup</span><span class="price">4.90</span><span class="desc">Try our homemade soup of the day!</span><span class="tag">vegan</span></div>
+</div>
+</body>
+</html>
