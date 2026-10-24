@@ -4,8 +4,10 @@
 #   docker compose up --build -d
 #
 # The domain's DNS record must point to this server, and ports 80 and 443 must be open, so
-# Caddy can get the certificate. Menus and photos are kept in the "data" volume, certificates
-# in "caddy_data", so restarts and updates keep both.
+# Caddy can get the certificate. Those ports belong to the shared proxy from
+# github.com/gmiszori/webserver-proxy, which must be running first: it creates the "webserver"
+# network Caddy joins. Menus and photos are kept in the "data" volume, certificates in
+# "caddy_data", so restarts and updates keep both.
 services:
   mensafinder:
     build: .
@@ -26,10 +28,11 @@ services:
 
   caddy:
     image: caddy:2.11.7-alpine # pinned, so an update is a deliberate change here
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp" # HTTP/3
+    # Not published on the host: the shared proxy routes this domain here by name.
+    networks:
+      default:
+      webserver:
+        aliases: [mensa]
     environment:
       DOMAIN: ${DOMAIN:-localhost}
     volumes:
@@ -47,3 +50,7 @@ volumes:
   data:
   caddy_data:
   caddy_config:
+
+networks:
+  webserver:
+    external: true

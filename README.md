@@ -50,11 +50,11 @@ go test ./...
 ## How it works
 
 ```
-                                         every hour
-Browser ─► Caddy (HTTPS) ─► Mensa Finder ◄──────────── ETH menu API
-                            (Go, one binary)  ◄─────── app.food2050.ch (UZH and other ZFV canteens)
-                                  │
-                                  └─ data/menus.json, data/photos/
+                                                  every hour
+Browser ─► proxy ─► Caddy (HTTPS) ─► Mensa Finder ◄──────────── ETH menu API
+                                     (Go, one binary)  ◄─────── app.food2050.ch (UZH and other ZFV canteens)
+                                           │
+                                           └─ data/menus.json, data/photos/
 ```
 
 1. **Fetching.** On start and every hour, the program asks both sources for the current week and
@@ -88,12 +88,15 @@ makes it the address to watch with an uptime monitor.
 
 ## Deploying
 
-Everything runs in Docker on one server. Caddy answers on ports 80 and 443, gets and renews the
-HTTPS certificate by itself, and passes requests on to Mensa Finder. Mensa Finder is not
-reachable from outside.
+Everything runs in Docker on one server, behind the shared
+[webserver-proxy](https://github.com/gmiszori/webserver-proxy). The proxy owns ports 80 and 443
+and passes this domain's traffic to Caddy without decrypting it. Caddy gets and renews the HTTPS
+certificate by itself and passes requests on to Mensa Finder. Neither is reachable from outside
+except through the proxy.
 
 1. Point the domain's DNS A (and AAAA) record at the server.
-2. Open inbound TCP 80 and 443, and UDP 443 for HTTP/3.
+2. Open inbound TCP 80 and 443, and make sure the proxy is running with `MENSA_DOMAIN` set to
+   your domain.
 3. On the server:
    ```bash
    git clone https://github.com/gmiszori/mensa.miszori.dev && cd mensa.miszori.dev
@@ -107,14 +110,15 @@ Caddy's version is pinned in `docker-compose.yml`; to update it, change the tag 
 
 Logs: `docker compose logs -f`. Caddy writes one line per request. Docker keeps at most
 30 MB of logs per container.
-Without a `.env`, Caddy serves https://localhost with a local certificate, which is handy for
-trying the setup out.
+To try the production setup locally, start the proxy first with `PUBLIC_BIND_IP=127.0.0.1` and
+`MENSA_DOMAIN=localhost` in its `.env`. Without a `.env` here, Caddy then serves https://localhost
+with a local certificate.
 
 ### Configuration (`.env`)
 
 | Variable | Default | |
 |----------|---------|--|
-| `DOMAIN` | `localhost` | The domain Caddy serves and gets the certificate for. |
+| `DOMAIN` | `localhost` | The domain Caddy serves and gets the certificate for. Must match `MENSA_DOMAIN` in the proxy. |
 | `REFRESH_EVERY` | `1h` | How often menus are fetched again. |
 
 ## Security
@@ -133,6 +137,9 @@ trying the setup out.
 - **Minimal, non-root container.** The image holds only the program (distroless, about 20 MB),
   runs as an unprivileged user with a memory limit, and sits behind Caddy.
 - **HTTPS only.** Caddy redirects HTTP to HTTPS and sends HSTS, so browsers keep using HTTPS.
+- **Real addresses only from the proxy.** Caddy trusts the visitor address in a PROXY header only
+  from the proxy's fixed address (`172.31.250.2`), so another container can't fake one in the
+  logs.
 - **Timeouts.** The server limits how long reading and writing a request may take. This stops
   slow clients from holding connections open.
 

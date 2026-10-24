@@ -1,9 +1,26 @@
-# Caddy is the public web server: it answers on ports 80 and 443, gets and renews the HTTPS
-# certificate for DOMAIN by itself (from Let's Encrypt), compresses responses and passes every
-# request on to Mensa Finder, which is only reachable inside the Docker network.
+# Caddy is the public web server: it gets and renews the HTTPS certificate for DOMAIN by itself
+# (from Let's Encrypt), compresses responses and passes every request on to Mensa Finder, which
+# is only reachable inside the Docker network. Ports 80 and 443 belong to the shared proxy
+# (github.com/gmiszori/webserver-proxy), which passes this domain's TLS through untouched.
 #
 # DOMAIN comes from the .env file next to docker-compose.yml. Without it, Caddy serves
 # https://localhost with its own local certificate, for trying the setup out.
+{
+	servers {
+		# Only the proxy reaches this Caddy. It starts every connection with a PROXY header
+		# carrying the visitor's address, trusted from the proxy's fixed address alone, so the
+		# access log shows visitors, not the proxy.
+		listener_wrappers {
+			proxy_protocol {
+				allow 172.31.250.2/32
+			}
+			tls
+		}
+		# The proxy forwards TCP only, so don't advertise HTTP/3 over UDP.
+		protocols h1 h2
+	}
+}
+
 {$DOMAIN:localhost} {
 	encode zstd gzip
 
@@ -17,4 +34,10 @@
 	log
 
 	reverse_proxy mensafinder:8080
+}
+
+# The HTTP->HTTPS redirect, spelled out: Caddy's automatic redirect server doesn't get the
+# PROXY-protocol listener above and would reject every request.
+http:// {
+	redir https://{host}{uri} 308
 }
