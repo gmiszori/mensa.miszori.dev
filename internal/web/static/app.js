@@ -236,7 +236,9 @@
   // flip runs change(), which reorders elements, and lets each of them glide from its old
   // place to its new one (the "FLIP" technique: First, Last, Invert, Play).
   // A dish is measured relative to its canteen, which may be moving itself.
-  function flip(elements, change) {
+  // anchor, if given, is what the visitor tapped: the page scrolls with it, so it stays where it
+  // was on screen while the rest moves around it.
+  function flip(elements, change, anchor) {
     const where = (el) => {
       const r = el.getBoundingClientRect();
       if (!el.closest('.dishes')) return r;
@@ -244,7 +246,9 @@
       return { left: r.left - card.left, top: r.top - card.top };
     };
     const before = new Map(elements.map((el) => [el, where(el)]));
+    const anchorTop = anchor?.getBoundingClientRect().top;
     change();
+    if (anchor) window.scrollBy({ top: anchor.getBoundingClientRect().top - anchorTop, behavior: 'instant' });
     if (reduceMotion.matches) return;
     for (const [el, old] of before) {
       const now = where(el);
@@ -339,8 +343,8 @@
   }
 
   // name is one of the dish's names; keys are all its names, so unstarring removes the entry
-  // whichever language it was starred in.
-  function setStarred(name, on, keys = [starKey(name)]) {
+  // whichever language it was starred in. anchor is the dish tapped, if any (see flip).
+  function setStarred(name, on, keys = [starKey(name)], anchor = undefined) {
     settings.star = settings.star.filter((n) => !keys.includes(starKey(n)));
     if (on) settings.star.unshift(name);
     saveSettings();
@@ -351,7 +355,7 @@
       markStarred(dishes);
       for (const list of lists) sortDishes(list);
       apply(); // also moves canteens whose number of starred dishes changed
-    });
+    }, anchor);
     showStarredList();
   }
 
@@ -645,14 +649,14 @@
       settings.fav = settings.fav.filter((x) => x !== id);
       if (on) settings.fav.push(id);
       saveSettings();
-      flip(cards, placeCards);
+      flip(cards, placeCards, favourite.closest('.canteen'));
       return;
     }
     const star = e.target.closest('[data-star]');
     if (star) {
       const dish = star.closest('.dish');
       const name = settings.lang === 'de' ? dish.dataset.nameDe || dish.dataset.name : dish.dataset.name;
-      setStarred(name, star.getAttribute('aria-pressed') !== 'true', dishKeys(dish));
+      setStarred(name, star.getAttribute('aria-pressed') !== 'true', dishKeys(dish), dish);
     }
   });
 
