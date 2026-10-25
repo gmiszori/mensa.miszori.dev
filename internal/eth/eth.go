@@ -295,6 +295,8 @@ func toDish(en, de *meal, untranslated map[string]bool) (menu.Dish, bool) {
 	if name.EN == "" {
 		return menu.Dish{}, false
 	}
+	name.EN, name.DE = uncut(name.EN, name.DE)
+	desc.EN, desc.DE = uncut(desc.EN, desc.DE)
 	name.EN, name.DE = menu.TidyName(name.EN), menu.TidyName(name.DE)
 
 	var allergenNames []string
@@ -366,6 +368,34 @@ func components(s string) string {
 }
 
 // clean tidies whitespace and drops the API's "novalue" placeholder.
+// uncut repairs texts that ETH's system cut off at a length limit, such as the name
+// "Cappellacci with Vegetables and ..." (in German, the same dish is the complete
+// "Cappellacci Verdure Ricotta di Bufala"). The two languages are rarely cut both, so a cut
+// text is replaced by the other language's complete one. A text cut in both languages keeps
+// what there is and ends in a proper "…".
+func uncut(en, de string) (string, string) {
+	switch {
+	case isCut(en) && !isCut(de) && de != "":
+		en = de
+	case isCut(de) && !isCut(en) && en != "":
+		de = en
+	}
+	return ellipsis(en), ellipsis(de)
+}
+
+// isCut reports whether a text ends in "..", "..." or "…", the way ETH marks cut texts.
+func isCut(s string) bool {
+	return strings.HasSuffix(s, "..") || strings.HasSuffix(s, "…")
+}
+
+// ellipsis turns the dots at the end of a cut text into a single "…".
+func ellipsis(s string) string {
+	if !isCut(s) {
+		return s
+	}
+	return strings.TrimRight(strings.TrimRight(s, ".…"), " ,") + "…"
+}
+
 func clean(s string) string {
 	s = menu.CleanText(s)
 	if strings.EqualFold(s, "novalue") {

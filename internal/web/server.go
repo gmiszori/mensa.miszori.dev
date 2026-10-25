@@ -50,6 +50,10 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", s.home)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", cacheStatic(http.FileServerFS(static))))
+	// Browsers, bookmarks and link previews ask for /favicon.ico on their own.
+	mux.Handle("GET /favicon.ico", cacheStatic(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFileFS(w, r, static, "favicon.ico")
+	})))
 	mux.Handle("GET /photos/{file}", s.Photos)
 	mux.HandleFunc("GET /api/menu", s.apiMenu)
 	mux.HandleFunc("GET /healthz", s.health)

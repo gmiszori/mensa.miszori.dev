@@ -58,3 +58,21 @@ func TestPhotoID(t *testing.T) {
 		}
 	}
 }
+
+func TestUncut(t *testing.T) {
+	for _, c := range []struct{ en, de, wantEN, wantDE string }{
+		// English cut, German complete: both get the German text.
+		{"Cappellacci with Vegetables and ...", "Cappellacci Verdure Ricotta di Bufala",
+			"Cappellacci Verdure Ricotta di Bufala", "Cappellacci Verdure Ricotta di Bufala"},
+		// Cut in both: keep each, ending in one "…".
+		{"Golden Bun, Lettuce, F...", "Golden Bun, Lattich, Farmer Pom..",
+			"Golden Bun, Lettuce, F…", "Golden Bun, Lattich, Farmer Pom…"},
+		// Nothing cut: unchanged.
+		{"Soup of the day", "Tagessuppe", "Soup of the day", "Tagessuppe"},
+	} {
+		en, de := uncut(c.en, c.de)
+		if en != c.wantEN || de != c.wantDE {
+			t.Errorf("uncut(%q, %q) = %q, %q; want %q, %q", c.en, c.de, en, de, c.wantEN, c.wantDE)
+		}
+	}
+}
