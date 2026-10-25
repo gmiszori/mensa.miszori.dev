@@ -19,6 +19,10 @@ database and no accounts. The code was written with AI under my direction.
   prices. Only one dish is open at a time, centred on the screen.
 - **Your campuses, your diet.** Settings show only the campuses you pick, only vegetarian or
   vegan dishes, and hide dishes with the allergens you choose. Changes apply immediately.
+- **Your budget.** A slider hides dishes that cost more than you want to pay, for your price
+  group; tick a box to see them below the others instead, under "Over budget".
+- **Nearest first.** Sort the canteens by distance, with the distance shown on each one. The
+  browser asks for your location on each visit; it is never stored or sent.
 - **Favourites and starred dishes.** A starred canteen stays at the top of the page. A starred
   dish is listed first and marked wherever it is on the menu, on any day.
 - **Any day, lunch or dinner.** The calendar button next to the search shows menus up to two

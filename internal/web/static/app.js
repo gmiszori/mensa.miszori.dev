@@ -4,7 +4,7 @@
 // and German. The visitor's settings never leave the browser; they live in localStorage
 // ("mp"), and this script:
 //   1. applies them when the page loads (boot.js has already set language and theme): prices,
-//      filters, favourite canteens first, starred dishes marked and first,
+//      filters, budget, favourite (or nearest) canteens first, starred dishes marked and first,
 //   2. filters instantly (search, lunch/dinner, and the diet, campus, allergen and "open now"
 //      settings) by hiding elements,
 //   3. opens one dish at a time, animated, centred on screen, with its photo large,
@@ -100,6 +100,20 @@
 
   const allergenHidden = (dish) => dish.dataset.allergens.split(' ').some((a) => a && settings.hide.includes(a));
 
+  // The budget is a price in CHF for the chosen price group, or not set for no limit.
+  // Dishes without a price, or priced per 100g, are always within it.
+  const BUDGET_OFF = 15.5; // the slider's right end
+  const priceGroup = () => (['staff', 'external'].includes(settings.price) ? settings.price : 'student');
+  const hasBudget = () => typeof settings.budget === 'number' && settings.budget < BUDGET_OFF;
+  function overBudget(dish) {
+    if (!hasBudget() || dish.querySelector('.price small')) return false;
+    const price = parseFloat(dish.dataset[priceGroup()]);
+    return price > settings.budget;
+  }
+
+  // The dishes of a list, without its "Over budget" label.
+  const dishesOf = (list) => list.querySelectorAll(':scope > .dish');
+
   // Current time in Zurich as "HH:MM", whatever the visitor's time zone.
   function zurichClock() {
     return new Intl.DateTimeFormat('en-GB', {
@@ -152,21 +166,26 @@
       for (const list of card.querySelectorAll('.dishes')) {
         const active = list.dataset.meal === state.meal;
         list.hidden = !active;
-        for (const dish of list.children) {
+        let overShown = false;
+        for (const dish of dishesOf(list)) {
           const allergenOk = !allergenHidden(dish);
           if (campusOk && !allergenOk) hiddenByAllergens++;
           if (campusOk && allergenOk && dish.hasAttribute('data-starred')) starredHits++;
           if (active && allergenOk) mealHasDishes = true;
-          const ok = allergenOk && dietMatches(dish.dataset.diet) && (query === '' || nameHit || searchText.get(dish).includes(query));
+          const over = overBudget(dish);
+          const ok = allergenOk && dietMatches(dish.dataset.diet) && (!over || settings.overBelow === true)
+            && (query === '' || nameHit || searchText.get(dish).includes(query));
           dish.hidden = !ok;
+          if (ok && over) overShown = true;
           if (active && ok) visibleDishes++;
         }
+        list.querySelector(':scope > .over-budget').hidden = !overShown;
         // The divider under a starred dish's band goes, also when hidden dishes sit between.
         let previous = null;
-        for (const dish of list.children) {
-          if (dish.hidden) continue;
-          dish.classList.toggle('after-starred', previous?.hasAttribute('data-starred') === true);
-          previous = dish;
+        for (const item of list.children) {
+          if (item.hidden) continue;
+          item.classList.toggle('after-starred', previous?.hasAttribute('data-starred') === true);
+          previous = item;
         }
       }
       for (const span of card.querySelectorAll('[data-for-meal]')) {
@@ -220,7 +239,7 @@
   function flip(elements, change) {
     const where = (el) => {
       const r = el.getBoundingClientRect();
-      if (!el.classList.contains('dish')) return r;
+      if (!el.closest('.dishes')) return r;
       const card = el.closest('.canteen').getBoundingClientRect();
       return { left: r.left - card.left, top: r.top - card.top };
     };
@@ -238,19 +257,28 @@
     }
   }
 
-  // Starred dishes first, otherwise in the source's order (data-order).
+  // Dishes within the budget first, then the "Over budget" label and the others. In each part
+  // starred dishes first, otherwise in the source's order (data-order).
   function sortDishes(list) {
-    const order = [...list.children].sort((a, b) =>
-      (Number(b.hasAttribute('data-starred')) - Number(a.hasAttribute('data-starred'))) || (a.dataset.order - b.dataset.order));
-    for (const dish of order) list.append(dish);
+    const order = [...dishesOf(list)].sort((a, b) =>
+      (Number(overBudget(a)) - Number(overBudget(b)))
+      || (Number(b.hasAttribute('data-starred')) - Number(a.hasAttribute('data-starred')))
+      || (a.dataset.order - b.dataset.order));
+    const label = list.querySelector(':scope > .over-budget');
+    const firstOver = order.findIndex(overBudget);
+    if (firstOver < 0) order.push(label);
+    else order.splice(firstOver, 0, label);
+    list.append(...order);
   }
+  const sortAllDishes = () => { for (const list of document.querySelectorAll('.dishes')) sortDishes(list); };
 
   const isFavourite = (card) => card.querySelector('[data-favourite]').getAttribute('aria-pressed') === 'true';
   const starredCount = (card) => card.querySelectorAll(`.dishes[data-meal="${state.meal}"] .dish[data-starred]`).length;
 
-  // Favourite canteens first, those with more starred dishes in this meal before the others;
-  // then the catalog's order.
+  // Sorted by distance: nearest first. Otherwise favourite canteens first, those with more
+  // starred dishes in this meal before the others; then the catalog's order.
   function rankCards() {
+    if (settings.near === true && here) return [...cards].sort((a, b) => distance(a) - distance(b));
     return [...cards].sort((a, b) => {
       const fa = isFavourite(a);
       const fb = isFavourite(b);
@@ -325,6 +353,76 @@
       apply(); // also moves canteens whose number of starred dishes changed
     });
     showStarredList();
+  }
+
+  // ---------- sorting canteens by distance ----------
+  //
+  // The browser is asked for the visitor's location on each visit while the setting is on. It
+  // is only used here: never stored, never sent.
+
+  let here = null; // {lat, lng}
+  const nearError = document.getElementById('near-error');
+
+  // Metres between the visitor and a canteen (haversine formula).
+  function distance(card) {
+    const lat = Number(card.dataset.lat);
+    const lng = Number(card.dataset.lng);
+    if (!here || !lat) return Infinity;
+    const rad = Math.PI / 180;
+    const a = Math.sin((lat - here.lat) * rad / 2) ** 2
+      + Math.cos(here.lat * rad) * Math.cos(lat * rad) * Math.sin((lng - here.lng) * rad / 2) ** 2;
+    return 2 * 6371e3 * Math.asin(Math.sqrt(a));
+  }
+
+  // "350 m", "1.2 km", "74 km".
+  function formatDistance(m) {
+    if (m < 1000) return `${Math.round(m / 10) * 10} m`;
+    return `${(m / 1000).toFixed(m < 10e3 ? 1 : 0)} km`;
+  }
+
+  function showDistances() {
+    for (const card of cards) {
+      const label = card.querySelector('[data-distance]');
+      const m = settings.near === true ? distance(card) : Infinity;
+      label.hidden = m === Infinity;
+      label.textContent = m === Infinity ? '' : ` · ${formatDistance(m)}`;
+    }
+  }
+
+  // The canteens glide to their new places.
+  function reorderCards() {
+    flip(cards, () => {
+      showDistances();
+      apply();
+    });
+  }
+
+  function locationFailed() {
+    settings.near = false;
+    saveSettings();
+    here = null;
+    showSettingsSheet();
+    setText(nearError, 'nearFailed');
+    nearError.hidden = false;
+    reorderCards();
+  }
+
+  function locate() {
+    nearError.hidden = true;
+    if (settings.near !== true) {
+      here = null;
+      reorderCards();
+      return;
+    }
+    if (!navigator.geolocation) {
+      locationFailed();
+      return;
+    }
+    navigator.geolocation.getCurrentPosition((position) => {
+      if (settings.near !== true) return; // turned off meanwhile
+      here = { lat: position.coords.latitude, lng: position.coords.longitude };
+      reorderCards();
+    }, locationFailed, { maximumAge: 5 * 60 * 1000, timeout: 15 * 1000 });
   }
 
   // ---------- opening a dish ----------
@@ -607,11 +705,47 @@
     closeSettings();
   });
   function showPrices() {
-    const group = ['student', 'staff', 'external'].includes(settings.price) ? settings.price : 'student';
+    const group = priceGroup();
     for (const dish of document.querySelectorAll('.dish')) {
       dish.querySelector('.price-value').textContent = dish.dataset[group];
     }
   }
+
+  // ---------- the budget ----------
+
+  const budgetSlider = document.getElementById('budget');
+  const budgetValue = document.getElementById('budget-value');
+  const overBelow = document.getElementById('over-below');
+
+  // Shows the budget in the sheet: the slider, its value and the tick box.
+  function showBudget() {
+    budgetSlider.value = hasBudget() ? settings.budget : BUDGET_OFF;
+    if (hasBudget()) budgetValue.textContent = `CHF ${settings.budget.toFixed(2)}`;
+    else setText(budgetValue, 'noLimit');
+    budgetSlider.setAttribute('aria-valuetext', hasBudget() ? budgetValue.textContent : allTexts[settings.lang]?.noLimit || '');
+    overBelow.checked = settings.overBelow === true;
+    overBelow.disabled = !hasBudget();
+  }
+
+  // The dishes move between the two parts of each list as the budget or price group changes.
+  function applyBudget() {
+    sortAllDishes();
+    apply();
+  }
+
+  budgetSlider.addEventListener('input', () => {
+    const value = Number(budgetSlider.value);
+    if (value >= BUDGET_OFF) delete settings.budget;
+    else settings.budget = value;
+    showBudget();
+    applyBudget();
+  });
+  budgetSlider.addEventListener('change', saveSettings);
+  overBelow.addEventListener('change', () => {
+    settings.overBelow = overBelow.checked;
+    saveSettings();
+    apply();
+  });
 
   function showTheme() {
     const root = document.documentElement;
@@ -620,9 +754,10 @@
   }
 
   const applySetting = {
-    price: showPrices,
+    price: () => { showPrices(); applyBudget(); },
     theme: showTheme,
-    lang: showLanguage,
+    lang: () => { showLanguage(); showBudget(); },
+    near: locate,
   };
 
   // Shows the saved settings in the sheet's buttons.
@@ -631,7 +766,7 @@
       const key = group.dataset.setting;
       if (key === 'star') continue;
       let value = settings[key];
-      if (key === 'open') value = value === true ? '1' : '';
+      if (key === 'open' || key === 'near') value = value === true ? '1' : '';
       if (key === 'price' && !['staff', 'external'].includes(value)) value = 'student';
       if (key === 'diet' && !['vegetarian', 'vegan'].includes(value)) value = '';
       if (key === 'theme' && !['light', 'dark'].includes(value)) value = 'system';
@@ -640,6 +775,7 @@
       }
     }
     showStarredList();
+    showBudget();
   }
 
   for (const group of dialog.querySelectorAll('[data-setting]')) {
@@ -660,9 +796,9 @@
         settings[key] = settings[key].filter((v) => v !== button.value);
         if (on) settings[key].push(button.value);
       } else {
-        // One value: price, diet, open now (on/off), language, theme.
+        // One value: price, diet, open now and sort by distance (on/off), language, theme.
         for (const b of group.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b === button));
-        settings[key] = key === 'open' ? button.value === '1' : button.value;
+        settings[key] = key === 'open' || key === 'near' ? button.value === '1' : button.value;
       }
       saveSettings();
       (applySetting[key] || apply)();
@@ -698,11 +834,17 @@
   }
   const allDishes = [...document.querySelectorAll('.dish')];
   markStarred(allDishes);
-  for (const list of document.querySelectorAll('.dishes')) sortDishes(list);
+  for (const list of document.querySelectorAll('.dishes')) {
+    const label = Object.assign(document.createElement('li'), { className: 'over-budget', hidden: true });
+    setText(label, 'overBudget');
+    list.append(label);
+  }
+  sortAllDishes();
   refreshStatus();
   apply();
   root.classList.remove('loading');
   lastLayout = '';
   placeCards(); // again, now that the cards can be measured
   setInterval(refreshStatus, 60 * 1000);
+  if (settings.near === true) locate();
 })();

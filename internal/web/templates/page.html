@@ -85,13 +85,13 @@
 
   <div class="canteens" id="canteens">
     {{range .Canteens}}
-    <section class="canteen" data-order="{{.Order}}" data-id="{{.ID}}" data-campus="{{.Campus}}" data-hours="{{.Hours}}" data-name="{{.Name}}">
+    <section class="canteen" data-order="{{.Order}}" data-id="{{.ID}}" data-campus="{{.Campus}}" data-hours="{{.Hours}}" data-name="{{.Name}}" data-lat="{{.Lat}}" data-lng="{{.Lng}}">
       <div class="canteen-head">
         <button class="star" type="button" data-favourite aria-pressed="false" aria-label="{{call $.T "favourite"}}: {{.Name}}" data-i18n="aria-label:favourite" data-i18n-suffix=": {{.Name}}"><svg><use href="#i-star"/></svg></button>
         <div class="canteen-title">
           <h2>{{.Name}}</h2>
           <div class="canteen-meta">
-            <a href="{{.MapURL}}" target="_blank" rel="noopener" title="{{call $.T "map"}}" data-i18n="title:map">{{.CampusName}}</a>
+            <a href="{{.MapURL}}" target="_blank" rel="noopener" title="{{call $.T "map"}}" data-i18n="title:map">{{.CampusName}}</a><span data-distance hidden></span>
             {{- range .Meals}}{{if and .From .Dishes}}<span data-for-meal="{{.Kind}}"> · {{.From}}–{{.To}}</span>{{end}}{{end -}}
           </div>
         </div>
@@ -152,6 +152,16 @@
     </div>
   </div>
   <div class="setting">
+    <h3 id="budget-title">{{call .B "setBudget"}}</h3>
+    <p>{{call .B "setBudgetHelp"}}</p>
+    <div class="budget">
+      <!-- The right end (15.50) means no limit. -->
+      <input type="range" id="budget" min="4" max="15.5" step="0.5" value="15.5" aria-labelledby="budget-title">
+      <output for="budget" id="budget-value"></output>
+    </div>
+    <label class="check"><input type="checkbox" id="over-below">{{call .B "setOverBelow"}}</label>
+  </div>
+  <div class="setting">
     <h3>{{call .B "setCampuses"}}</h3>
     <p>{{call .B "setCampusesHelp"}}</p>
     <div class="wrap" data-setting="campuses">
@@ -173,6 +183,15 @@
       <button type="button" value="" aria-pressed="true">{{call .B "off"}}</button>
       <button type="button" value="1" aria-pressed="false">{{call .B "on"}}</button>
     </div>
+  </div>
+  <div class="setting">
+    <h3>{{call .B "setNear"}}</h3>
+    <p>{{call .B "setNearHelp"}}</p>
+    <div class="segmented" data-setting="near">
+      <button type="button" value="" aria-pressed="true">{{call .B "off"}}</button>
+      <button type="button" value="1" aria-pressed="false">{{call .B "on"}}</button>
+    </div>
+    <p class="setting-error" id="near-error" hidden></p>
   </div>
   <div class="setting">
     <h3>{{call .B "setAllergens"}}</h3>

@@ -192,6 +192,11 @@ button { cursor: pointer; }
   background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 10%, transparent), color-mix(in srgb, var(--gradient-end) 6%, transparent));
 }
 .dish.after-starred, .dish[data-starred] { border-top-color: transparent; }
+/* Off-budget dishes, when the visitor chose to see them below the others. */
+.over-budget { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-sub); text-transform: uppercase;
+  letter-spacing: 0.06em; padding: 14px 0 4px; border-top: 1px solid var(--border); }
+.over-budget:first-child { border-top: 0; padding-top: 4px; }
+.over-budget + .dish { border-top-color: transparent; }
 .dish details > summary { list-style: none; cursor: pointer; }
 .dish details > summary::-webkit-details-marker { display: none; }
 .dish-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 10px 0; }
@@ -269,6 +274,13 @@ dialog.sheet::backdrop { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4
 .setting h3 { font-size: 0.9rem; font-weight: 600; }
 .setting p { font-size: 0.82rem; color: var(--text-sub); }
 .wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+.budget { display: flex; align-items: center; gap: 14px; }
+.budget input { flex: 1; min-width: 0; accent-color: var(--accent); }
+.budget output { font-family: var(--font-mono); font-size: 0.85rem; font-variant-numeric: tabular-nums; min-width: 6.5em; text-align: right; }
+.check { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; cursor: pointer; justify-self: start; }
+.check input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+.check:has(input:disabled) { color: var(--text-sub); cursor: default; }
+.setting .setting-error { color: var(--text-muted); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }

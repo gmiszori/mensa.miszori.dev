@@ -145,6 +145,7 @@ type canteenView struct {
 	ID, Name, Campus, CampusName, Address, MapURL string
 	Order                                         int        // position in the catalog
 	Hours                                         string     // e.g. "11:15-14:00 17:30-19:30", for app.js
+	Lat, Lng                                      float64    // for app.js to sort by distance
 	Meals                                         []mealView // lunch, then dinner
 }
 
@@ -270,8 +271,8 @@ func (s *Server) buildPage(lang, requested, meal string, now time.Time) pageData
 func (s *Server) canteenView(c catalog.Canteen, day menu.Day) canteenView {
 	v := canteenView{
 		ID: c.ID, Name: c.Name, Campus: c.Campus, CampusName: s.Catalog.CampusName(c.Campus),
-		Address: c.Address,
-		MapURL:  "https://www.google.com/maps/search/?api=1&query=" + url.QueryEscape(c.Name+", "+c.Address),
+		Address: c.Address, Lat: c.Lat, Lng: c.Lng,
+		MapURL: "https://www.google.com/maps/search/?api=1&query=" + url.QueryEscape(c.Name+", "+c.Address),
 	}
 	convert := func(kind string, m menu.Meal) mealView {
 		out := mealView{Kind: kind, From: m.From, To: m.To}
@@ -382,7 +383,7 @@ func securityHeaders(h http.Handler) http.Handler {
 		w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
-		w.Header().Set("Permissions-Policy", "geolocation=(), camera=(), microphone=()")
+		w.Header().Set("Permissions-Policy", "geolocation=(self), camera=(), microphone=()") // location: sorting by distance
 		h.ServeHTTP(w, r)
 	})
 }
