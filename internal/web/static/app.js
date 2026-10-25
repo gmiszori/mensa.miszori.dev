@@ -1,47 +1,74 @@
 // Mensaplan Zürich in the browser.
 //
-// The server already renders the whole page with every menu of the day. This script only:
-//   1. filters instantly (search, lunch/dinner, and the diet, campus, allergen and "open now"
+// The server renders the same page for everyone: every menu of the day, every text in English
+// and German. The visitor's settings never leave the browser; they live in localStorage
+// ("mp"), and this script:
+//   1. applies them when the page loads (boot.js has already set language and theme): prices,
+//      filters, favourite canteens first, starred dishes marked and first,
+//   2. filters instantly (search, lunch/dinner, and the diet, campus, allergen and "open now"
 //      settings) by hiding elements,
-//   2. opens one dish at a time, animated, centred on screen, with its photo large,
-//   3. applies settings the moment they change and saves them, with favourites and starred
-//      dishes, in the "mp" cookie, which the server reads on the next page load
-//      (see internal/web/settings.go).
+//   3. opens one dish at a time, animated, centred on screen, with its photo large,
+//   4. applies settings the moment they change and saves them.
 (() => {
   'use strict';
 
   const body = document.body;
-  const texts = JSON.parse(body.dataset.texts || '{}');
+  const root = document.documentElement;
+  const allTexts = JSON.parse(body.dataset.texts || '{}'); // {en: {...}, de: {...}}
   const grid = document.getElementById('canteens');
   const cards = [...document.querySelectorAll('.canteen')];
   const isToday = body.dataset.today === 'true';
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-  // ---------- the settings cookie ----------
+  // ---------- the settings, kept in this browser only ----------
 
   function readSettings() {
-    const match = document.cookie.match(/(?:^|;\s*)mp=([^;]*)/);
     try {
-      return match ? JSON.parse(decodeURIComponent(match[1])) : {};
+      const parsed = JSON.parse(localStorage.getItem('mp') || '{}');
+      return parsed && typeof parsed === 'object' ? parsed : {};
     } catch {
       return {};
     }
   }
 
   function saveSettings() {
-    const year = 60 * 60 * 24 * 400;
-    document.cookie = `mp=${encodeURIComponent(JSON.stringify(settings))}; path=/; max-age=${year}; samesite=lax`;
+    try { localStorage.setItem('mp', JSON.stringify(settings)); } catch { /* not saved, still applied */ }
   }
 
   const settings = readSettings();
   for (const key of ['campuses', 'hide', 'fav', 'star']) {
     if (!Array.isArray(settings[key])) settings[key] = [];
   }
-  // The server picks the language from the browser until one is saved; keep that choice.
-  settings.lang ||= document.documentElement.lang;
+  settings.lang = settings.lang === 'de' || settings.lang === 'en' ? settings.lang : root.lang;
 
-  // Same rule as starKey in settings.go: case and spacing do not matter.
+  // ---------- texts in both languages ----------
+  //
+  // Every text on the page is there in English and German, each in a <span lang>; app.css
+  // shows the spans of the page's language. Texts this script writes follow the same rule, so
+  // switching the language only has to change <html lang> and a few attributes.
+
+  function setText(el, key, count) {
+    el.replaceChildren(...['en', 'de'].map((lang) => Object.assign(document.createElement('span'), {
+      lang, textContent: (allTexts[lang]?.[key] || '').replace('%d', count),
+    })));
+  }
+
+  // Attributes can't hold two languages; they are set to the current one.
+  // data-i18n="aria-label:settings" sets aria-label to the text "settings".
+  function showLanguage() {
+    root.lang = settings.lang;
+    const texts = allTexts[settings.lang] || {};
+    for (const el of document.querySelectorAll('[data-i18n]')) {
+      const [attr, key] = el.dataset.i18n.split(':');
+      el.setAttribute(attr, (texts[key] || '') + (el.dataset.i18nSuffix || ''));
+    }
+  }
+
+  // Starred dishes are kept by name. Case and spacing do not matter, and a dish matches by its
+  // English or its German name.
   const starKey = (name) => name.toLowerCase().split(/\s+/).filter(Boolean).join(' ');
+  const dishKeys = (dish) => [dish.dataset.name, dish.dataset.nameDe].filter(Boolean).map(starKey);
+  const isStarred = (dish) => dishKeys(dish).some((k) => settings.star.some((n) => starKey(n) === k));
 
   // ---------- filtering ----------
 
@@ -52,6 +79,15 @@
 
   // Lowercase and without accents, so "creme" finds "Crème".
   const fold = (s) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+
+  // What the search looks in: each dish's name and description, in both languages. Built here
+  // from the page's text rather than sent by the server a second time.
+  const bothLanguages = (el) => {
+    const spans = el.querySelectorAll('span[lang]');
+    return spans.length ? [...spans].map((span) => span.textContent).join(' ') : el.textContent;
+  };
+  const searchText = new Map([...document.querySelectorAll('.dish')].map((dish) => [dish,
+    fold(`${bothLanguages(dish.querySelector('.dish-name'))} ${bothLanguages(dish.querySelector('.dish-desc'))}`)]));
 
   // No campus selected in the settings means all campuses.
   const campusMatches = (campus) => settings.campuses.length === 0 || settings.campuses.includes(campus);
@@ -86,17 +122,17 @@
     return closingTime(hours) !== '';
   }
 
-  // timeLeft formats the time until a clock time as "1h 20" or "45 min", like the server.
+  // timeLeft formats the time until a clock time as "1h 20" or "45 min".
   function timeLeft(to) {
     const minutes = (clock) => { const [h, m] = clock.split(':'); return +h * 60 + +m; };
     const left = minutes(to) - minutes(zurichClock());
     return left < 60 ? `${left} min` : `${Math.floor(left / 60)}h ${String(left % 60).padStart(2, '0')}`;
   }
 
-  function notice(id, template, count) {
+  function notice(id, key, count) {
     const el = document.getElementById(id);
     el.hidden = count === 0;
-    el.textContent = (template || '%d').replace('%d', count);
+    setText(el, key, count);
   }
 
   function apply() {
@@ -121,9 +157,16 @@
           if (campusOk && !allergenOk) hiddenByAllergens++;
           if (campusOk && allergenOk && dish.hasAttribute('data-starred')) starredHits++;
           if (active && allergenOk) mealHasDishes = true;
-          const ok = allergenOk && dietMatches(dish.dataset.diet) && (query === '' || nameHit || fold(dish.dataset.search).includes(query));
+          const ok = allergenOk && dietMatches(dish.dataset.diet) && (query === '' || nameHit || searchText.get(dish).includes(query));
           dish.hidden = !ok;
           if (active && ok) visibleDishes++;
+        }
+        // The divider under a starred dish's band goes, also when hidden dishes sit between.
+        let previous = null;
+        for (const dish of list.children) {
+          if (dish.hidden) continue;
+          dish.classList.toggle('after-starred', previous?.hasAttribute('data-starred') === true);
+          previous = dish;
         }
       }
       for (const span of card.querySelectorAll('[data-for-meal]')) {
@@ -143,11 +186,10 @@
     const noMenu = document.getElementById('no-menu');
     const missing = noMenu.querySelectorAll('li:not([hidden])').length;
     noMenu.hidden = missing === 0;
-    const template = state.meal === 'dinner' ? texts.noDinner : texts.noLunch;
-    noMenu.querySelector('summary').textContent = (template || '%d').replace('%d', missing);
+    setText(noMenu.querySelector('summary'), state.meal === 'dinner' ? 'noDinner' : 'noLunch', missing);
     document.getElementById('no-results').hidden = shown > 0 || cards.length === 0;
-    notice('hidden-count', texts.hidden, hiddenByAllergens);
-    notice('starred-hits', texts.starHits, starredHits);
+    notice('hidden-count', 'hiddenDishes', hiddenByAllergens);
+    notice('starred-hits', 'starredToday', starredHits);
 
     for (const button of document.querySelectorAll('[data-meal-button]')) {
       button.setAttribute('aria-pressed', String(button.dataset.mealButton === state.meal));
@@ -155,7 +197,7 @@
     placeCards();
   }
 
-  // ---------- open / closed labels stay current while the page is open ----------
+  // ---------- open / closed labels, today only, kept current while the page is open ----------
 
   function refreshStatus() {
     if (!isToday) return;
@@ -164,7 +206,8 @@
       if (!label) continue;
       const closes = closingTime(card.dataset.hours);
       label.className = `status ${closes ? 'open' : 'closed'}`;
-      label.textContent = closes ? `${texts.open} · ${timeLeft(closes)}` : texts.closed;
+      setText(label, closes ? 'open' : 'closed');
+      if (closes) label.append(` · ${timeLeft(closes)}`);
     }
     if (settings.open === true) apply();
   }
@@ -206,7 +249,7 @@
   const starredCount = (card) => card.querySelectorAll(`.dishes[data-meal="${state.meal}"] .dish[data-starred]`).length;
 
   // Favourite canteens first, those with more starred dishes in this meal before the others;
-  // then the catalog's order. Same rule as in server.go.
+  // then the catalog's order.
   function rankCards() {
     return [...cards].sort((a, b) => {
       const fa = isFavourite(a);
@@ -245,39 +288,43 @@
   twoColumns.addEventListener('change', placeCards);
   document.fonts?.ready.then(() => { lastLayout = ''; placeCards(); });
 
-  function setStarred(name, on) {
-    const key = starKey(name);
-    settings.star = settings.star.filter((n) => starKey(n) !== key);
-    if (on) settings.star.push(name);
+  // markStarred shows the given dishes as starred or not; the button's text follows by CSS.
+  function markStarred(dishes) {
+    for (const dish of dishes) {
+      const on = isStarred(dish);
+      dish.toggleAttribute('data-starred', on);
+      dish.querySelector('[data-star]').setAttribute('aria-pressed', String(on));
+    }
+  }
+
+  // The list of starred dishes in the settings sheet, each a button that unstars it.
+  function showStarredList() {
+    const group = document.querySelector('[data-setting="star"]');
+    group.querySelectorAll('button').forEach((chip) => chip.remove());
+    for (const name of settings.star) {
+      const chip = Object.assign(document.createElement('button'), { className: 'chip', type: 'button', value: name });
+      chip.setAttribute('aria-pressed', 'true');
+      chip.textContent = `${name} ✕`;
+      group.append(chip);
+    }
+    group.querySelector('[data-none]').hidden = settings.star.length > 0;
+  }
+
+  // name is one of the dish's names; keys are all its names, so unstarring removes the entry
+  // whichever language it was starred in.
+  function setStarred(name, on, keys = [starKey(name)]) {
+    settings.star = settings.star.filter((n) => !keys.includes(starKey(n)));
+    if (on) settings.star.unshift(name);
     saveSettings();
     // Every copy of this dish on the page (it may be served in several canteens) moves.
-    const dishes = [...document.querySelectorAll('.dish')].filter((d) => starKey(d.dataset.name) === key);
+    const dishes = [...document.querySelectorAll('.dish')].filter((d) => dishKeys(d).some((k) => keys.includes(k)));
     const lists = new Set(dishes.map((d) => d.parentElement));
     flip([...cards, ...[...lists].flatMap((list) => [...list.children])], () => {
-      for (const dish of dishes) {
-        dish.toggleAttribute('data-starred', on);
-        const button = dish.querySelector('[data-star]');
-        button.setAttribute('aria-pressed', String(on));
-        button.textContent = on ? texts.starred : texts.star;
-      }
+      markStarred(dishes);
       for (const list of lists) sortDishes(list);
       apply(); // also moves canteens whose number of starred dishes changed
     });
-    // Keep the list of starred dishes in the settings sheet up to date.
-    const group = document.querySelector('[data-setting="star"]');
-    for (const chip of group.querySelectorAll('button')) {
-      if (starKey(chip.value) === key) chip.remove();
-    }
-    if (on) {
-      const chip = document.createElement('button');
-      chip.className = 'chip';
-      chip.type = 'button';
-      chip.value = name;
-      chip.setAttribute('aria-pressed', 'true');
-      chip.textContent = `${name} ✕`;
-      group.prepend(chip);
-    }
-    group.querySelector('[data-none]').hidden = settings.star.length > 0;
+    showStarredList();
   }
 
   // ---------- opening a dish ----------
@@ -459,7 +506,7 @@
 
   function setMeal(meal) {
     state.meal = meal;
-    document.getElementById('when-label').textContent = `${whenButton.dataset.day} · ${texts[meal]}`;
+    for (const label of document.querySelectorAll('[data-meal-label]')) label.hidden = label.dataset.mealLabel !== meal;
     // Switching day keeps the meal.
     for (const link of document.querySelectorAll('[data-day-link]')) {
       const url = new URL(link.href);
@@ -506,14 +553,14 @@
     const star = e.target.closest('[data-star]');
     if (star) {
       const dish = star.closest('.dish');
-      setStarred(dish.dataset.name, star.getAttribute('aria-pressed') !== 'true');
+      const name = settings.lang === 'de' ? dish.dataset.nameDe || dish.dataset.name : dish.dataset.name;
+      setStarred(name, star.getAttribute('aria-pressed') !== 'true', dishKeys(dish));
     }
   });
 
   // ---------- the settings sheet ----------
   //
-  // Every setting takes effect immediately. Only the language needs the page from the
-  // server again; the sheet reopens after that reload.
+  // Every setting takes effect immediately and is saved in this browser.
 
   const dialog = document.getElementById('settings');
   const sheetIsCentred = window.matchMedia('(min-width: 700px)'); // see dialog.sheet in app.css
@@ -559,13 +606,6 @@
     e.preventDefault();
     closeSettings();
   });
-  try {
-    if (sessionStorage.getItem('mp-settings-open')) {
-      sessionStorage.removeItem('mp-settings-open');
-      dialog.showModal(); // no animation: it was already open before the reload
-    }
-  } catch { /* storage unavailable: the sheet just stays closed */ }
-
   function showPrices() {
     const group = ['student', 'staff', 'external'].includes(settings.price) ? settings.price : 'student';
     for (const dish of document.querySelectorAll('.dish')) {
@@ -582,12 +622,25 @@
   const applySetting = {
     price: showPrices,
     theme: showTheme,
-    lang: () => {
-      try { sessionStorage.setItem('mp-settings-open', '1'); } catch { /* see above */ }
-      location.reload();
-    },
-    star: () => {}, // handled below
+    lang: showLanguage,
   };
+
+  // Shows the saved settings in the sheet's buttons.
+  function showSettingsSheet() {
+    for (const group of dialog.querySelectorAll('[data-setting]')) {
+      const key = group.dataset.setting;
+      if (key === 'star') continue;
+      let value = settings[key];
+      if (key === 'open') value = value === true ? '1' : '';
+      if (key === 'price' && !['staff', 'external'].includes(value)) value = 'student';
+      if (key === 'diet' && !['vegetarian', 'vegan'].includes(value)) value = '';
+      if (key === 'theme' && !['light', 'dark'].includes(value)) value = 'system';
+      for (const b of group.querySelectorAll('button')) {
+        b.setAttribute('aria-pressed', String(Array.isArray(value) ? value.includes(b.value) : b.value === value));
+      }
+    }
+    showStarredList();
+  }
 
   for (const group of dialog.querySelectorAll('[data-setting]')) {
     const key = group.dataset.setting;
@@ -633,7 +686,23 @@
   }
 
   // ---------- start ----------
+  //
+  // Apply the saved settings while the placeholder cards are showing, then swap them for the
+  // menus. This all happens before the browser draws again, so nothing visibly jumps.
 
+  showLanguage();
+  showPrices();
+  showSettingsSheet();
+  for (const card of cards) {
+    card.querySelector('[data-favourite]').setAttribute('aria-pressed', String(settings.fav.includes(card.dataset.id)));
+  }
+  const allDishes = [...document.querySelectorAll('.dish')];
+  markStarred(allDishes);
+  for (const list of document.querySelectorAll('.dishes')) sortDishes(list);
+  refreshStatus();
   apply();
+  root.classList.remove('loading');
+  lastLayout = '';
+  placeCards(); // again, now that the cards can be measured
   setInterval(refreshStatus, 60 * 1000);
 })();

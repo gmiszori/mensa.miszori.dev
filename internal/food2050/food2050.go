@@ -23,6 +23,9 @@ import (
 	"mensaplan/internal/menu"
 )
 
+// PhotoURL is where FOOD2050's dish photos are; the photo handler downloads only from here.
+const PhotoURL = "https://storage.googleapis.com/dish-images-prod/"
+
 // Client fetches pages. Use New.
 type Client struct {
 	http *http.Client

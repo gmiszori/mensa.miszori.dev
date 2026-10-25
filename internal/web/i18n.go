@@ -6,7 +6,7 @@ import (
 )
 
 // texts holds every interface text in English and German. Menu texts come from the
-// sources and are not translated here.
+// sources and are not translated here. The page carries all of them, for app.js.
 var texts = map[string]map[string]string{
 	"en": {
 		"search":          "Search dishes",
@@ -16,6 +16,7 @@ var texts = map[string]map[string]string{
 		"close":           "Close",
 		"day":             "Day",
 		"meal":            "Meal",
+		"dayMeal":         "Day, meal",
 		"lunch":           "Lunch",
 		"dinner":          "Dinner",
 		"vegan":           "Vegan",
@@ -68,6 +69,7 @@ var texts = map[string]map[string]string{
 		"close":           "Schliessen",
 		"day":             "Tag",
 		"meal":            "Mahlzeit",
+		"dayMeal":         "Tag, Mahlzeit",
 		"lunch":           "Mittag",
 		"dinner":          "Abend",
 		"vegan":           "Vegan",

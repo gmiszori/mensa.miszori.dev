@@ -26,9 +26,10 @@ func TestHandler(t *testing.T) {
 
 	known := map[string]string{"aa11": source.URL + "/photo", "bb22": source.URL + "/logo"}
 	h := &Handler{
-		Dir:    t.TempDir(),
-		Lookup: func(key string) (string, bool) { url, ok := known[key]; return url, ok },
-		HTTP:   source.Client(),
+		Dir:     t.TempDir(),
+		Lookup:  func(key string) (string, bool) { url, ok := known[key]; return url, ok },
+		HTTP:    source.Client(),
+		Allowed: []string{source.URL + "/"},
 	}
 	mux := http.NewServeMux()
 	mux.Handle("GET /photos/{file}", h)
@@ -83,7 +84,7 @@ func TestTooLarge(t *testing.T) {
 		_ = jpeg.Encode(w, image.NewGray(image.Rect(0, 0, 5000, 5000)), nil)
 	}))
 	defer source.Close()
-	h := &Handler{Dir: t.TempDir(), HTTP: source.Client(),
+	h := &Handler{Dir: t.TempDir(), HTTP: source.Client(), Allowed: []string{source.URL},
 		Lookup: func(string) (string, bool) { return source.URL, true }}
 	if err := h.fetchOnce(source.URL, "aa"); err == nil {
 		t.Error("a 25 megapixel image was accepted")
@@ -97,7 +98,7 @@ func TestOneDownloadPerPhoto(t *testing.T) {
 		_ = jpeg.Encode(w, image.NewRGBA(image.Rect(0, 0, 800, 600)), nil)
 	}))
 	defer source.Close()
-	h := &Handler{Dir: t.TempDir(), HTTP: source.Client(),
+	h := &Handler{Dir: t.TempDir(), HTTP: source.Client(), Allowed: []string{source.URL},
 		Lookup: func(string) (string, bool) { return source.URL, true }}
 	mux := http.NewServeMux()
 	mux.Handle("GET /photos/{file}", h)
@@ -137,5 +138,50 @@ func TestPrune(t *testing.T) {
 	left, _ := os.ReadDir(dir)
 	if removed != 3 || len(left) != 2 {
 		t.Errorf("removed %d, %d files left; want 3 removed and aa's two files kept", removed, len(left))
+	}
+}
+
+func TestOnlyAllowedSources(t *testing.T) {
+	var asked int
+	source := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		asked++
+		if r.URL.Path == "/elsewhere" {
+			http.Redirect(w, r, "http://127.0.0.1:1/internal", http.StatusFound)
+			return
+		}
+		_ = jpeg.Encode(w, image.NewRGBA(image.Rect(0, 0, 800, 600)), nil)
+	}))
+	defer source.Close()
+	h := &Handler{Dir: t.TempDir(), HTTP: source.Client(), Allowed: []string{source.URL + "/photos/"},
+		Lookup: func(string) (string, bool) { return "", true }}
+
+	if err := h.fetchOnce(source.URL+"/other/1.jpg", "aa"); err == nil || asked != 0 {
+		t.Errorf("a URL outside the allowed prefix was fetched (err %v, %d requests)", err, asked)
+	}
+	if err := h.fetchOnce(source.URL+"/photos/2.jpg", "bb"); err != nil {
+		t.Errorf("an allowed URL failed: %v", err)
+	}
+	h.Allowed = []string{source.URL + "/elsewhere"}
+	if err := h.fetchOnce(source.URL+"/elsewhere", "cc"); err == nil {
+		t.Error("a redirect to another address was followed")
+	}
+}
+
+func TestFailedPhotoWaits(t *testing.T) {
+	var asked int
+	source := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		asked++
+		http.Error(w, "down", http.StatusInternalServerError)
+	}))
+	defer source.Close()
+	h := &Handler{Dir: t.TempDir(), HTTP: source.Client(), Allowed: []string{source.URL},
+		Lookup: func(string) (string, bool) { return source.URL, true }}
+	for range 3 {
+		if err := h.fetchOnce(source.URL, "aa"); err == nil {
+			t.Fatal("a failing download succeeded")
+		}
+	}
+	if asked != 1 {
+		t.Errorf("the source was asked %d times within retryAfter, want 1", asked)
 	}
 }

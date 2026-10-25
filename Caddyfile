@@ -33,6 +33,9 @@
 	# Caddy leaves cookies and authorization headers out of these logs.
 	log
 
+	# The health route is for Docker's health check inside the network, not for visitors.
+	respond /healthz 404
+
 	reverse_proxy mensaplan:8080
 }
 

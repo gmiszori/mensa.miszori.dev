@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -152,8 +153,19 @@ func (c *Client) getJSON(ctx context.Context, u string, into any) error {
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("GET %s: %s", u, resp.Status)
 	}
-	return json.NewDecoder(resp.Body).Decode(into)
+	// A week's menus are about 1 MB; anything far larger is not a menu.
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, maxResponse+1))
+	if err != nil {
+		return fmt.Errorf("GET %s: %w", u, err)
+	}
+	if len(raw) > maxResponse {
+		return fmt.Errorf("GET %s: response larger than %d bytes", u, maxResponse)
+	}
+	return json.Unmarshal(raw, into)
 }
+
+// maxResponse is the largest answer the menu API may send.
+const maxResponse = 20 << 20 // 20 MB
 
 // facilities lists the distinct facility ids that appear in the rotas.
 func facilities(rotas []rota) []int {

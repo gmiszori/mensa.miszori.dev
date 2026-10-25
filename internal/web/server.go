@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -32,9 +31,12 @@ type Server struct {
 	Photos  http.Handler
 	Zone    *time.Location
 	Log     *slog.Logger
-	// StaleAfter is how old a source's last successful refresh may be before
-	// /healthz/menus reports a problem.
+	// StaleAfter is how old a source's last successful refresh may be before /healthz lists
+	// it as stale.
 	StaleAfter time.Duration
+	// Domain is the public domain (e.g. "mensa.miszori.dev") for absolute links in link
+	// previews. Empty or "localhost": the address of the request is used.
+	Domain string
 
 	page    *template.Template
 	version string // changes whenever a static file changes; see staticVersion
@@ -56,9 +58,7 @@ func (s *Server) Handler() http.Handler {
 		http.ServeFileFS(w, r, static, "favicon.ico")
 	})))
 	mux.Handle("GET /photos/{file}", s.Photos)
-	mux.HandleFunc("GET /api/menu", s.apiMenu)
 	mux.HandleFunc("GET /healthz", s.health)
-	mux.HandleFunc("GET /healthz/menus", s.menuHealth)
 	return securityHeaders(mux)
 }
 
@@ -81,9 +81,8 @@ func (s *Server) home(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	settings := readSettings(r)
-	data := s.buildPage(settings, q.Get("day"), q.Get("meal"), now)
-	data.SiteURL = siteURL(r)
+	data := s.buildPage(browserLang(r), q.Get("day"), q.Get("meal"), now)
+	data.SiteURL = s.siteURL(r)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store") // menus and settings change; always render fresh
 	if err := s.page.Execute(w, data); err != nil {
@@ -91,87 +90,60 @@ func (s *Server) home(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// apiMenu returns one day's menus as JSON (?day=YYYY-MM-DD, default today). Handy for
-// debugging and for anyone who wants the data.
-func (s *Server) apiMenu(w http.ResponseWriter, r *http.Request) {
-	day := r.URL.Query().Get("day")
-	if day == "" {
-		day = time.Now().In(s.Zone).Format(time.DateOnly)
-	}
-	if _, err := time.Parse(time.DateOnly, day); err != nil {
-		http.Error(w, "day must be YYYY-MM-DD", http.StatusBadRequest)
-		return
-	}
-	writeJSON(w, map[string]any{"day": day, "canteens": s.Store.On(day)})
-}
-
 // health answers as long as the server runs; Docker's health check uses it. It also says when
-// each source last refreshed.
+// each source last refreshed, and lists as "stale" those that have not refreshed successfully
+// for StaleAfter (or never). Stale menus still count as healthy: restarting the container
+// would not bring a source back.
 func (s *Server) health(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, map[string]any{"status": "ok", "updated": s.Store.Updated(), "days": s.Store.Dates()})
-}
-
-// menuHealth is for outside monitoring: it answers 503 when a source has not refreshed
-// successfully for StaleAfter (or never), i.e. when menus are getting old.
-func (s *Server) menuHealth(w http.ResponseWriter, r *http.Request) {
 	updated := s.Store.Updated()
-	var stale []string
+	stale := []string{}
 	for _, source := range []string{"eth", "food2050"} {
 		if at, ok := updated[source]; !ok || time.Since(at) > s.StaleAfter {
 			stale = append(stale, source)
 		}
 	}
-	status := "ok"
-	if len(stale) > 0 {
-		status = "stale"
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusServiceUnavailable)
-	}
-	writeJSON(w, map[string]any{"status": status, "stale": stale, "updated": updated})
+	writeJSON(w, map[string]any{"status": "ok", "stale": stale, "updated": updated, "days": s.Store.Dates()})
 }
 
 // ---- building the page ----
 
-// pageData is everything the template shows.
+// pageData is everything the template shows. It is the same for every visitor: their
+// settings are applied in the browser.
 type pageData struct {
-	Lang, Theme, Price string
-	Diet               string
-	OpenNow            bool
-	T                  func(key string, args ...any) string
-	Version            string // appended to CSS and JS links, so browsers fetch new versions
-	SiteURL            string // e.g. "https://mensa.miszori.dev", for link previews
+	Lang    string                                      // browserLang: the language until app.js knows better
+	T       func(key string, args ...any) string        // a text in Lang, for attributes and meta tags
+	B       func(key string, args ...any) template.HTML // a text in both languages, see tr
+	Version string                                      // appended to CSS and JS links, so browsers fetch new versions
+	SiteURL string                                      // e.g. "https://mensa.miszori.dev", for link previews
 
 	Date      string // the day shown, YYYY-MM-DD
 	IsToday   bool
-	Notice    string // e.g. "No menus for Saturday 24 October. Showing Monday 26 October."
+	Notice    template.HTML // e.g. "No menus for Saturday 24 October. Showing Monday 26 October."
 	Days      []dayLink
-	DayLabel  string // the day shown, short: "Mon 26"
-	Meal      string // "lunch" or "dinner": which one to show first
+	DayLabel  template.HTML // the day shown, short: "Mon 26"
+	Meal      string        // "lunch" or "dinner": which one to show first
 	Campuses  []option
 	Allergens []option
-	Starred   []string
 	Canteens  []canteenView
 	NoMenu    []canteenView
-	Footer    string
-	JSTexts   string // texts app.js needs, as a JSON object
+	Footer    template.HTML
+	JSTexts   string // every interface text in both languages, as JSON, for app.js
 }
 
 type dayLink struct {
-	Date, Label string
-	Selected    bool
+	Date     string
+	Label    template.HTML
+	Selected bool
 }
 
 type option struct {
-	ID, Name string
-	On       bool
+	ID   string
+	Name template.HTML
 }
 
 type canteenView struct {
 	ID, Name, Campus, CampusName, Address, MapURL string
-	Favourite                                     bool
 	Order                                         int        // position in the catalog
-	Status                                        string     // "open", "closed" or "" (not today)
-	Left                                          string     // time until it closes while open, e.g. "1h 20"
 	Hours                                         string     // e.g. "11:15-14:00 17:30-19:30", for app.js
 	Meals                                         []mealView // lunch, then dinner
 }
@@ -183,22 +155,20 @@ type mealView struct {
 }
 
 type dishView struct {
-	Name, Description, Diet, DietLabel string
-	Allergens                          string // display names, comma separated
-	AllergenIDs                        string // space separated, for app.js to hide dishes
-	Price                              float64
-	Per100g                            bool
-	Prices                             menu.Prices
-	Photo                              string
-	Starred                            bool
-	Order                              int    // position on the source's menu
-	Search                             string // lowercase text app.js searches in
+	NameEN, NameDE               string // for app.js to recognise starred dishes
+	Name, Description, DietLabel template.HTML
+	Diet                         string
+	Allergens                    template.HTML // display names, comma separated
+	AllergenIDs                  string        // space separated, for app.js to hide dishes
+	Per100g                      bool
+	Prices                       menu.Prices
+	Photo                        string
+	Order                        int // position on the source's menu
 }
 
 // buildPage decides which day and meal to show and turns the store's data into pageData.
-func (s *Server) buildPage(set Settings, requested, meal string, now time.Time) pageData {
-	lang := set.Lang
-	t := func(key string, args ...any) string { return translate(lang, key, args...) }
+// lang only picks the language of attributes and meta tags; every visible text is in both.
+func (s *Server) buildPage(lang, requested, meal string, now time.Time) pageData {
 	today := now.Format(time.DateOnly)
 
 	// Days that have menus, from today on.
@@ -220,42 +190,41 @@ func (s *Server) buildPage(set Settings, requested, meal string, now time.Time) 
 		date = dates[0]
 	}
 	day, _ := time.ParseInLocation(time.DateOnly, date, s.Zone)
-	dayLabel := shortDay(lang, day)
 
 	p := pageData{
-		Lang: lang, Theme: set.Theme, Price: set.Price, Diet: set.Diet, OpenNow: set.OpenNow,
-		T: t, Version: s.version,
-		Date: date, IsToday: date == today, DayLabel: dayLabel,
-		Starred: set.Starred,
+		Lang:    lang,
+		T:       func(key string, args ...any) string { return translate(lang, key, args...) },
+		B:       tr,
+		Version: s.version,
+		Date:    date, IsToday: date == today,
+		DayLabel: both(shortDay("en", day), shortDay("de", day)),
 	}
 	switch {
 	case len(dates) == 0:
-		p.Notice = t("nothingYet")
+		p.Notice = tr("nothingYet")
 	case requested == "" && date != today:
 		todayTime, _ := time.ParseInLocation(time.DateOnly, today, s.Zone)
-		p.Notice = t("noMenusToday", longDay(lang, todayTime), longDay(lang, day))
+		p.Notice = both(
+			translate("en", "noMenusToday", longDay("en", todayTime), longDay("en", day)),
+			translate("de", "noMenusToday", longDay("de", todayTime), longDay("de", day)))
 	}
 	for _, d := range dates {
 		dt, _ := time.ParseInLocation(time.DateOnly, d, s.Zone)
-		p.Days = append(p.Days, dayLink{Date: d, Label: shortDay(lang, dt), Selected: d == date})
+		p.Days = append(p.Days, dayLink{Date: d, Label: both(shortDay("en", dt), shortDay("de", dt)), Selected: d == date})
 	}
 	for _, c := range s.Catalog.Campuses {
-		p.Campuses = append(p.Campuses, option{ID: c.ID, Name: c.Name, On: slices.Contains(set.Campuses, c.ID)})
+		p.Campuses = append(p.Campuses, option{ID: c.ID, Name: both(c.Name, c.Name)})
 	}
 	for _, a := range menu.Allergens {
-		p.Allergens = append(p.Allergens, option{ID: a, Name: allergenNames[lang][a], On: slices.Contains(set.Hide, a)})
+		p.Allergens = append(p.Allergens, option{ID: a, Name: both(allergenNames["en"][a], allergenNames["de"][a])})
 	}
 
-	// One view per canteen; favourites first, otherwise in catalog order.
+	// One view per canteen, in catalog order; app.js puts the visitor's favourites first.
 	menus := s.Store.On(date)
 	hasDinner := false
 	for i, c := range s.Catalog.Canteens {
-		v := s.canteenView(c, menus[c.ID], set)
+		v := s.canteenView(c, menus[c.ID])
 		v.Order = i
-		v.Favourite = slices.Contains(set.Favourites, c.ID)
-		if p.IsToday {
-			v.Status, v.Left = status(v, now)
-		}
 		if len(v.Meals[0].Dishes)+len(v.Meals[1].Dishes) == 0 {
 			p.NoMenu = append(p.NoMenu, v)
 			continue
@@ -275,22 +244,7 @@ func (s *Server) buildPage(set Settings, requested, meal string, now time.Time) 
 		p.Meal = "lunch"
 	}
 
-	// Favourite canteens first, those with more starred dishes in this meal before the
-	// others; otherwise catalog order. app.js applies the same rule when things change.
-	slices.SortStableFunc(p.Canteens, func(a, b canteenView) int {
-		switch {
-		case a.Favourite != b.Favourite && a.Favourite:
-			return -1
-		case a.Favourite != b.Favourite:
-			return 1
-		case a.Favourite:
-			return b.starredIn(p.Meal) - a.starredIn(p.Meal)
-		default:
-			return 0
-		}
-	})
-
-	updated := t("never")
+	updated := ""
 	if times := s.Store.Updated(); len(times) > 0 {
 		var latest time.Time
 		for _, u := range times {
@@ -300,27 +254,20 @@ func (s *Server) buildPage(set Settings, requested, meal string, now time.Time) 
 		}
 		updated = latest.In(s.Zone).Format("02.01.2006 15:04")
 	}
-	p.Footer = t("footer", updated)
+	if updated == "" {
+		p.Footer = both(translate("en", "footer", texts["en"]["never"]), translate("de", "footer", texts["de"]["never"]))
+	} else {
+		p.Footer = tr("footer", updated)
+	}
 
-	js, _ := json.Marshal(map[string]string{
-		"noLunch":  texts[lang]["noLunch"],
-		"noDinner": texts[lang]["noDinner"],
-		"lunch":    t("lunch"),
-		"dinner":   t("dinner"),
-		"hidden":   texts[lang]["hiddenDishes"],
-		"starHits": texts[lang]["starredToday"],
-		"open":     t("open"),
-		"closed":   t("closed"),
-		"star":     "☆ " + t("star"),
-		"starred":  "★ " + t("starred"),
-	})
+	js, _ := json.Marshal(texts)
 	p.JSTexts = string(js)
 	return p
 }
 
-// canteenView prepares one canteen's menu, starred dishes first. Dishes with allergens the
-// visitor hides are included too: app.js hides them, so changing that setting needs no reload.
-func (s *Server) canteenView(c catalog.Canteen, day menu.Day, set Settings) canteenView {
+// canteenView prepares one canteen's menu in both languages. Every dish is included: app.js
+// hides those the visitor's settings filter out and puts starred ones first.
+func (s *Server) canteenView(c catalog.Canteen, day menu.Day) canteenView {
 	v := canteenView{
 		ID: c.ID, Name: c.Name, Campus: c.Campus, CampusName: s.Catalog.CampusName(c.Campus),
 		Address: c.Address,
@@ -329,37 +276,27 @@ func (s *Server) canteenView(c catalog.Canteen, day menu.Day, set Settings) cant
 	convert := func(kind string, m menu.Meal) mealView {
 		out := mealView{Kind: kind, From: m.From, To: m.To}
 		for i, d := range m.Dishes {
-			var names []string
+			var en, de []string
 			for _, a := range d.Allergens {
-				names = append(names, allergenNames[set.Lang][a])
+				en = append(en, allergenNames["en"][a])
+				de = append(de, allergenNames["de"][a])
 			}
 			dv := dishView{
-				Name:        d.Name.In(set.Lang),
-				Description: d.Description.In(set.Lang),
+				NameEN:      d.Name.In("en"),
+				NameDE:      d.Name.In("de"),
+				Name:        both(d.Name.In("en"), d.Name.In("de")),
+				Description: both(d.Description.In("en"), d.Description.In("de")),
 				Diet:        d.Diet,
-				DietLabel:   dietNames[set.Lang][d.Diet],
-				Allergens:   strings.Join(names, ", "),
+				DietLabel:   both(dietNames["en"][d.Diet], dietNames["de"][d.Diet]),
+				Allergens:   both(strings.Join(en, ", "), strings.Join(de, ", ")),
 				AllergenIDs: strings.Join(d.Allergens, " "),
-				Price:       d.Prices.For(set.Price),
 				Per100g:     d.Per100g,
 				Prices:      d.Prices,
 				Photo:       photoKey(d.Photo),
-				Starred:     set.isStarred(d),
 				Order:       i,
 			}
-			dv.Search = strings.ToLower(dv.Name + " " + dv.Description)
 			out.Dishes = append(out.Dishes, dv)
 		}
-		slices.SortStableFunc(out.Dishes, func(a, b dishView) int {
-			switch {
-			case a.Starred == b.Starred:
-				return 0
-			case a.Starred:
-				return -1
-			default:
-				return 1
-			}
-		})
 		return out
 	}
 	v.Meals = []mealView{convert("lunch", day.Lunch), convert("dinner", day.Dinner)}
@@ -369,53 +306,6 @@ func (s *Server) canteenView(c catalog.Canteen, day menu.Day, set Settings) cant
 		}
 	}
 	return v
-}
-
-// starredIn counts the starred dishes in one meal ("lunch" or "dinner").
-func (v canteenView) starredIn(kind string) int {
-	n := 0
-	for _, m := range v.Meals {
-		if m.Kind != kind {
-			continue
-		}
-		for _, d := range m.Dishes {
-			if d.Starred {
-				n++
-			}
-		}
-	}
-	return n
-}
-
-// status says whether a canteen is serving right now, from its lunch and dinner times.
-func status(v canteenView, now time.Time) (string, string) {
-	if v.Hours == "" {
-		return "", ""
-	}
-	clock := now.Format("15:04")
-	for _, window := range strings.Fields(v.Hours) {
-		from, to, _ := strings.Cut(window, "-")
-		if clock >= from && clock < to {
-			return "open", timeLeft(clock, to)
-		}
-	}
-	return "closed", ""
-}
-
-// timeLeft is the time from one clock time to a later one, as "1h 20" or "45 min".
-// app.js formats it the same way.
-func timeLeft(from, to string) string {
-	minutes := func(clock string) int {
-		h, m, _ := strings.Cut(clock, ":")
-		hh, _ := strconv.Atoi(h)
-		mm, _ := strconv.Atoi(m)
-		return hh*60 + mm
-	}
-	left := minutes(to) - minutes(from)
-	if left < 60 {
-		return fmt.Sprintf("%d min", left)
-	}
-	return fmt.Sprintf("%dh %02d", left/60, left%60)
 }
 
 // photoKey is the name a photo has in /photos/<key>.jpg, or "" for dishes without a photo.
@@ -435,9 +325,13 @@ func formatPrice(f float64) string {
 }
 
 // siteURL is the address visitors use, e.g. "https://mensa.miszori.dev". Link previews
-// (Open Graph) need absolute URLs. In production Caddy passes the visitor's host and sets
-// X-Forwarded-Proto itself (it ignores values sent by visitors).
-func siteURL(r *http.Request) string {
+// (Open Graph) need absolute URLs. It comes from Domain, so a request's Host header can't put
+// another address into the page. Only without one (trying it out locally) is the request's
+// address used.
+func (s *Server) siteURL(r *http.Request) string {
+	if s.Domain != "" && s.Domain != "localhost" {
+		return "https://" + s.Domain
+	}
 	scheme := "http"
 	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
 		scheme = "https"

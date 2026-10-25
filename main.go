@@ -15,15 +15,18 @@
 //	ADDR          where to listen (default ":8080")
 //	DATA_DIR      where menus and photo thumbnails are kept (default "./data")
 //	REFRESH_EVERY how often menus are re-fetched (default "1h")
+//	DOMAIN        the public domain, e.g. "mensa.miszori.dev", for absolute links in link
+//	              previews (default: the address of each request)
 //
-// "mensaplan healthcheck" asks a running instance whether it is up (used by Docker, whose
-// minimal image has no curl).
+// "mensaplan healthcheck" asks a running instance whether it is up and prints its status,
+// including sources whose menus are stale (used by Docker, whose minimal image has no curl).
 package main
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -86,7 +89,10 @@ func run(log *slog.Logger) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	photoHandler := &photos.Handler{Dir: filepath.Join(dataDir, "photos"), Lookup: store.PhotoURL, HTTP: client}
+	photoHandler := &photos.Handler{
+		Dir: filepath.Join(dataDir, "photos"), Lookup: store.PhotoURL, HTTP: client,
+		Allowed: []string{eth.BaseURL + "/images/", food2050.PhotoURL},
+	}
 
 	// Menus are refreshed in the background; the site serves what the store has meanwhile.
 	refresher := &refresh.Refresher{
@@ -101,6 +107,7 @@ func run(log *slog.Logger) error {
 
 	site := &web.Server{
 		Catalog: cat, Store: store, Zone: zurich, Log: log, Photos: photoHandler,
+		Domain: os.Getenv("DOMAIN"),
 		// Menus count as stale after three missed refreshes, but not before 6 hours.
 		StaleAfter: max(6*time.Hour, 3*every),
 	}
@@ -110,6 +117,8 @@ func run(log *slog.Logger) error {
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      60 * time.Second, // a photo's first request downloads it (up to 30s)
 		IdleTimeout:       2 * time.Minute,
+		// The site reads no cookies or other large headers; Go's default allows 1 MB.
+		MaxHeaderBytes: 32 << 10,
 	}
 
 	// On Ctrl-C or "docker stop": stop accepting requests, let running ones finish (up to
@@ -148,7 +157,8 @@ func healthcheck(addr string) error {
 	if err != nil {
 		return err
 	}
-	resp.Body.Close()
+	defer resp.Body.Close()
+	_, _ = io.Copy(os.Stdout, resp.Body) // the status: last refreshes and stale sources
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("healthz: %s", resp.Status)
 	}

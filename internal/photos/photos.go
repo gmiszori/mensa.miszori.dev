@@ -48,20 +48,32 @@ const (
 	maxPixels = 12_000_000 // e.g. 4000 x 3000
 )
 
+// retryAfter is how long a photo whose download failed is not tried again: every request for
+// it would otherwise start a new download from a source that is failing.
+const retryAfter = 5 * time.Minute
+
 // maxDownloads is how many photos are downloaded and resized at the same time. The first
 // visit to a page asks for dozens of photos at once; the rest wait their turn.
 const maxDownloads = 4
 
-var errNotAPhoto = errors.New("image is a placeholder, not a photo")
+var (
+	errNotAPhoto      = errors.New("image is a placeholder, not a photo")
+	errRecentlyFailed = errors.New("photo download failed recently")
+)
 
 // Handler serves GET /photos/{file}, where file is "<key>.jpg" or "<key>-large.jpg".
 type Handler struct {
 	Dir    string                                 // where thumbnails are cached
 	Lookup func(key string) (url string, ok bool) // source URL of a photo key (menu.Store.PhotoURL)
 	HTTP   *http.Client
+	// Allowed lists the URL prefixes photos may be downloaded from, redirects included. The
+	// URLs come from the menu sources; this keeps a broken or hostile source from making the
+	// server request other addresses, such as ones inside the Docker network.
+	Allowed []string
 
 	mu       sync.Mutex
 	inFlight map[string]*download // photos being downloaded right now, by key
+	failed   map[string]time.Time // when a photo's last download failed, by key
 	slots    chan struct{}        // one per running download, at most maxDownloads
 }
 
@@ -120,6 +132,10 @@ func (h *Handler) fetchOnce(url, key string) error {
 		<-d.done
 		return d.err
 	}
+	if at, ok := h.failed[key]; ok && time.Since(at) < retryAfter {
+		h.mu.Unlock()
+		return errRecentlyFailed
+	}
 	d := &download{done: make(chan struct{})}
 	h.inFlight[key] = d
 	slots := h.slots
@@ -134,14 +150,42 @@ func (h *Handler) fetchOnce(url, key string) error {
 
 	h.mu.Lock()
 	delete(h.inFlight, key)
+	if d.err != nil && !errors.Is(d.err, errNotAPhoto) {
+		if h.failed == nil {
+			h.failed = map[string]time.Time{}
+		}
+		h.failed[key] = time.Now()
+	} else {
+		delete(h.failed, key)
+	}
 	h.mu.Unlock()
 	close(d.done)
 	return d.err
 }
 
+// allowed reports whether a photo may be downloaded from url.
+func (h *Handler) allowed(url string) bool {
+	for _, prefix := range h.Allowed {
+		if strings.HasPrefix(url, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
 // fetch downloads one photo and stores both sizes.
 func (h *Handler) fetch(url, key string) error {
-	resp, err := h.HTTP.Get(url)
+	if !h.allowed(url) {
+		return fmt.Errorf("photo %s: not from an allowed source", url)
+	}
+	client := *h.HTTP
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if len(via) >= 5 || !h.allowed(req.URL.String()) {
+			return fmt.Errorf("photo %s: redirect to %s refused", url, req.URL)
+		}
+		return nil
+	}
+	resp, err := client.Get(url)
 	if err != nil {
 		return err
 	}

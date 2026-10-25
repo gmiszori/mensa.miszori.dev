@@ -10,19 +10,6 @@ import (
 	"mensaplan/internal/menu"
 )
 
-func TestTimeLeft(t *testing.T) {
-	for _, c := range []struct{ from, to, want string }{
-		{"12:10", "13:30", "1h 20"},
-		{"12:45", "13:30", "45 min"},
-		{"11:00", "14:00", "3h 00"},
-		{"13:29", "13:30", "1 min"},
-	} {
-		if got := timeLeft(c.from, c.to); got != c.want {
-			t.Errorf("timeLeft(%q, %q) = %q, want %q", c.from, c.to, got, c.want)
-		}
-	}
-}
-
 func TestPastDayRedirects(t *testing.T) {
 	zone, _ := time.LoadLocation("Europe/Zurich")
 	store, err := menu.Open(filepath.Join(t.TempDir(), "menus.json"))
@@ -51,5 +38,16 @@ func TestPastDayRedirects(t *testing.T) {
 	})
 	if got, want := location(), "/?day="+today+"&meal=dinner"; got != want {
 		t.Errorf("with menus today: Location = %q, want %q", got, want)
+	}
+}
+
+func TestSiteURL(t *testing.T) {
+	r := httptest.NewRequest("GET", "/", nil)
+	r.Host = "evil.example"
+	if got := (&Server{Domain: "mensa.miszori.dev"}).siteURL(r); got != "https://mensa.miszori.dev" {
+		t.Errorf("with a domain: %q", got)
+	}
+	if got := (&Server{}).siteURL(r); got != "http://evil.example" {
+		t.Errorf("without a domain: %q", got)
 	}
 }
