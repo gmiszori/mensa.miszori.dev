@@ -72,12 +72,25 @@
   }
 
   // hours looks like "11:15-14:00 17:30-19:30".
-  function isOpen(hours) {
+  // closingTime is when the current opening window ends ("13:30"), or "" while closed.
+  function closingTime(hours) {
     const now = zurichClock();
-    return hours.split(' ').some((window) => {
+    for (const window of hours.split(' ')) {
       const [from, to] = window.split('-');
-      return from && now >= from && now < to;
-    });
+      if (from && now >= from && now < to) return to;
+    }
+    return '';
+  }
+
+  function isOpen(hours) {
+    return closingTime(hours) !== '';
+  }
+
+  // timeLeft formats the time until a clock time as "1h 20" or "45 min", like the server.
+  function timeLeft(to) {
+    const minutes = (clock) => { const [h, m] = clock.split(':'); return +h * 60 + +m; };
+    const left = minutes(to) - minutes(zurichClock());
+    return left < 60 ? `${left} min` : `${Math.floor(left / 60)}h ${String(left % 60).padStart(2, '0')}`;
   }
 
   function notice(id, template, count) {
@@ -149,9 +162,9 @@
     for (const card of cards) {
       const label = card.querySelector('[data-status]');
       if (!label) continue;
-      const open = isOpen(card.dataset.hours);
-      label.className = `status ${open ? 'open' : 'closed'}`;
-      label.textContent = open ? texts.open : texts.closed;
+      const closes = closingTime(card.dataset.hours);
+      label.className = `status ${closes ? 'open' : 'closed'}`;
+      label.textContent = closes ? `${texts.open} · ${timeLeft(closes)}` : texts.closed;
     }
     if (settings.open === true) apply();
   }

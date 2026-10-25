@@ -8,8 +8,8 @@
 @font-face { font-family: 'Inter Variable'; src: url('../internal/web/static/fonts/inter-latin-wght-normal.woff2') format('woff2'); font-weight: 100 900; }
 @font-face { font-family: 'JetBrains Mono Variable'; src: url('../internal/web/static/fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2'); font-weight: 100 800; }
 :root {
-  --bg: #ffffff; --border: rgba(15, 23, 42, 0.1); --text: #000; --text-muted: #2c3441; --text-sub: #6a7585;
-  --accent: #4f46e5; --end: #9333ea; --pill: rgba(0, 0, 0, 0.05);
+  --bg: #ffffff; --border: rgba(15, 23, 42, 0.18); --text: #000; --text-muted: #1f2630; --text-sub: #525d6c;
+  --accent: #1d4ed8; --end: #0284c7; --pill: rgba(15, 23, 42, 0.06);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { width: 1200px; height: 630px; overflow: hidden; }
@@ -18,17 +18,15 @@ body {
   position: relative; display: flex; align-items: center; padding: 0 72px; gap: 56px;
 }
 .glow { position: absolute; top: -260px; right: -220px; width: 760px; height: 760px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(79, 70, 229, 0.16), transparent 68%); }
-.glow.b { top: auto; right: auto; bottom: -360px; left: -260px; background: radial-gradient(circle, rgba(147, 51, 234, 0.08), transparent 68%); }
+  background: radial-gradient(circle, rgba(29, 78, 216, 0.16), transparent 68%); }
+.glow.b { top: auto; right: auto; bottom: -360px; left: -260px; background: radial-gradient(circle, rgba(2, 132, 199, 0.08), transparent 68%); }
 .left { position: relative; flex: 1; display: flex; flex-direction: column; gap: 26px; }
-.logo { display: flex; align-items: flex-start; gap: 16px; }
-.logo svg { width: 64px; height: 64px; }
 h1 { font-size: 76px; font-weight: 800; letter-spacing: -0.035em; line-height: 1; }
 h1 span { background: linear-gradient(135deg, var(--accent), var(--end)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .lede { font-size: 31px; line-height: 1.35; color: var(--text-muted); font-weight: 500; letter-spacing: -0.01em; max-width: 560px; }
 .pills { display: flex; gap: 10px; flex-wrap: wrap; }
-.pill { font-family: 'JetBrains Mono Variable', monospace; font-size: 19px; color: var(--accent); background: rgba(79, 70, 229, 0.06);
-  border: 1px solid rgba(79, 70, 229, 0.22); border-radius: 999px; padding: 6px 16px; }
+.pill { font-family: 'JetBrains Mono Variable', monospace; font-size: 19px; color: var(--accent); background: rgba(29, 78, 216, 0.06);
+  border: 1px solid rgba(29, 78, 216, 0.22); border-radius: 999px; padding: 6px 16px; }
 .url { font-family: 'JetBrains Mono Variable', monospace; font-size: 22px; color: var(--text-sub); }
 
 .card { position: relative; width: 430px; background: #fff; border: 1px solid var(--border); border-radius: 22px;
@@ -49,10 +47,7 @@ h1 span { background: linear-gradient(135deg, var(--accent), var(--end)); -webki
 <body>
 <div class="glow"></div><div class="glow b"></div>
 <div class="left">
-  <div class="logo">
-    <svg viewBox="0 0 32 32"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f46e5"/><stop offset="1" stop-color="#9333ea"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#g)"/><circle cx="16" cy="16" r="8" fill="none" stroke="#fff" stroke-width="2.5"/><circle cx="16" cy="16" r="3.5" fill="#fff"/></svg>
-    <h1>Mensaplan<br><span>Zürich</span></h1>
-  </div>
+  <h1>Mensaplan<br><span>Zürich</span></h1>
   <p class="lede">Today's menus of the ETH and UZH canteens, on one page.</p>
   <div class="pills"><span class="pill">34 canteens</span><span class="pill">prices</span><span class="pill">photos</span><span class="pill">allergens</span></div>
   <p class="url">mensa.miszori.dev</p>

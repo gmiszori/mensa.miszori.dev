@@ -1,4 +1,5 @@
-/* Mensaplan Zürich styles, built on the miszori.dev design system tokens. */
+/* Mensaplan Zürich styles, built on the miszori.dev design system tokens with its own
+   blue gradient (#1d4ed8 to #0284c7) in place of indigo to cyan. */
 
 @font-face {
   font-family: 'Inter Variable';
@@ -17,14 +18,14 @@
 :root {
   --bg: #ffffff;
   --surface: rgba(255, 255, 255, 0.8);
-  --border: rgba(15, 23, 42, 0.1);
+  --border: rgba(15, 23, 42, 0.18);
   --text: #000000;
-  --text-muted: #2c3441;
-  --text-sub: #6a7585;
-  --accent: #4f46e5;
-  --gradient-end: #9333ea;
-  --pill-bg: rgba(0, 0, 0, 0.05);
-  --card-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.05);
+  --text-muted: #1f2630;
+  --text-sub: #525d6c;
+  --accent: #1d4ed8;
+  --gradient-end: #0284c7;
+  --pill-bg: rgba(15, 23, 42, 0.06);
+  --card-shadow: 0 10px 30px -12px rgba(15, 23, 42, 0.12);
 
   --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
@@ -39,28 +40,28 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     --bg: #000000;
-    --surface: #000000;
-    --border: rgba(255, 255, 255, 0.1);
+    --surface: #0a0a0d;
+    --border: rgba(255, 255, 255, 0.17);
     --text: #ffffff;
     --text-muted: #e0e3e9;
-    --text-sub: #989fae;
-    --accent: #6366f1;
-    --gradient-end: #a855f7;
-    --pill-bg: rgba(255, 255, 255, 0.03);
+    --text-sub: #a9b0be;
+    --accent: #60a5fa;
+    --gradient-end: #38bdf8;
+    --pill-bg: rgba(255, 255, 255, 0.06);
     --card-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
     color-scheme: dark;
   }
 }
 :root[data-theme='dark'] {
   --bg: #000000;
-  --surface: #000000;
-  --border: rgba(255, 255, 255, 0.1);
+  --surface: #0a0a0d;
+  --border: rgba(255, 255, 255, 0.17);
   --text: #ffffff;
   --text-muted: #e0e3e9;
-  --text-sub: #989fae;
-  --accent: #6366f1;
-  --gradient-end: #a855f7;
-  --pill-bg: rgba(255, 255, 255, 0.03);
+  --text-sub: #a9b0be;
+  --accent: #60a5fa;
+  --gradient-end: #38bdf8;
+  --pill-bg: rgba(255, 255, 255, 0.06);
   --card-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
   color-scheme: dark;
 }
@@ -85,8 +86,7 @@ button { cursor: pointer; }
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 16px 0 8px;
 }
-.brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.35rem; letter-spacing: -0.02em; text-decoration: none; color: var(--text); }
-.brand img { flex-shrink: 0; }
+.brand { font-weight: 800; font-size: 1.35rem; letter-spacing: -0.02em; text-decoration: none; color: var(--text); }
 .brand .name span {
   background: linear-gradient(135deg, var(--accent), var(--gradient-end));
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
@@ -179,6 +179,12 @@ button { cursor: pointer; }
 .dishes { list-style: none; }
 .dish { border-top: 1px solid var(--border); }
 .dish:first-child { border-top: 0; }
+/* A starred dish sits on a faint band of the gradient, across the whole card. */
+.dish[data-starred] {
+  margin: 0 -18px; padding: 0 18px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 10%, transparent), color-mix(in srgb, var(--gradient-end) 6%, transparent));
+}
+.dish[data-starred] + .dish, .dish + .dish[data-starred] { border-top-color: transparent; }
 .dish details > summary { list-style: none; cursor: pointer; }
 .dish details > summary::-webkit-details-marker { display: none; }
 .dish-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 10px 0; }

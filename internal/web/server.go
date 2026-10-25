@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -154,6 +155,7 @@ type canteenView struct {
 	Favourite                                     bool
 	Order                                         int        // position in the catalog
 	Status                                        string     // "open", "closed" or "" (not today)
+	Left                                          string     // time until it closes while open, e.g. "1h 20"
 	Hours                                         string     // e.g. "11:15-14:00 17:30-19:30", for app.js
 	Meals                                         []mealView // lunch, then dinner
 }
@@ -236,7 +238,7 @@ func (s *Server) buildPage(set Settings, requested, meal string, now time.Time) 
 		v.Order = i
 		v.Favourite = slices.Contains(set.Favourites, c.ID)
 		if p.IsToday {
-			v.Status = status(v, now)
+			v.Status, v.Left = status(v, now)
 		}
 		if len(v.Meals[0].Dishes)+len(v.Meals[1].Dishes) == 0 {
 			p.NoMenu = append(p.NoMenu, v)
@@ -370,18 +372,34 @@ func (v canteenView) starredIn(kind string) int {
 }
 
 // status says whether a canteen is serving right now, from its lunch and dinner times.
-func status(v canteenView, now time.Time) string {
+func status(v canteenView, now time.Time) (string, string) {
 	if v.Hours == "" {
-		return ""
+		return "", ""
 	}
 	clock := now.Format("15:04")
 	for _, window := range strings.Fields(v.Hours) {
 		from, to, _ := strings.Cut(window, "-")
 		if clock >= from && clock < to {
-			return "open"
+			return "open", timeLeft(clock, to)
 		}
 	}
-	return "closed"
+	return "closed", ""
+}
+
+// timeLeft is the time from one clock time to a later one, as "1h 20" or "45 min".
+// app.js formats it the same way.
+func timeLeft(from, to string) string {
+	minutes := func(clock string) int {
+		h, m, _ := strings.Cut(clock, ":")
+		hh, _ := strconv.Atoi(h)
+		mm, _ := strconv.Atoi(m)
+		return hh*60 + mm
+	}
+	left := minutes(to) - minutes(from)
+	if left < 60 {
+		return fmt.Sprintf("%d min", left)
+	}
+	return fmt.Sprintf("%dh %02d", left/60, left%60)
 }
 
 // photoKey is the name a photo has in /photos/<key>.jpg, or "" for dishes without a photo.

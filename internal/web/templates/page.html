@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="light dark">
   <title>{{call .T "pageTitle"}}</title>
   <meta name="description" content="{{call .T "pageDescription"}}">
-  <meta name="theme-color" content="#4f46e5">
+  <meta name="theme-color" content="#1d4ed8">
   <link rel="icon" href="/favicon.ico" sizes="48x48">
   <link rel="icon" href="/static/icon-32.png" type="image/png" sizes="32x32">
   <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
@@ -37,7 +37,7 @@
 
 <div class="container">
   <header class="site-header">
-    <a class="brand" href="/"><img src="/static/icon.svg" width="26" height="26" alt=""><span class="name">Mensaplan <span>Zürich</span></span></a>
+    <a class="brand" href="/"><span class="name">Mensaplan <span>Zürich</span></span></a>
     <button class="icon-btn" type="button" id="open-settings" aria-label="{{call .T "settings"}}"><svg><use href="#i-settings"/></svg></button>
   </header>
 </div>
@@ -81,7 +81,7 @@
             {{- range .Meals}}{{if and .From .Dishes}}<span data-for-meal="{{.Kind}}"> · {{.From}}–{{.To}}</span>{{end}}{{end -}}
           </div>
         </div>
-        {{if .Status}}<span class="status {{.Status}}" data-status>{{if eq .Status "open"}}{{call $.T "open"}}{{else}}{{call $.T "closed"}}{{end}}</span>{{end}}
+        {{if .Status}}<span class="status {{.Status}}" data-status>{{if eq .Status "open"}}{{call $.T "open"}}{{with .Left}} · {{.}}{{end}}{{else}}{{call $.T "closed"}}{{end}}</span>{{end}}
       </div>
       {{range .Meals}}
       <ul class="dishes" data-meal="{{.Kind}}">
