@@ -144,11 +144,13 @@
     <button class="icon-btn" type="button" id="close-settings" aria-label="{{call .T "close"}}" data-i18n="aria-label:close"><svg><use href="#i-x"/></svg></button>
   </div>
   <div class="setting">
-    <h3>{{call .B "setPrices"}}</h3>
-    <div class="segmented" data-setting="price">
-      <button type="button" value="student" aria-pressed="true">{{call .B "student"}}</button>
-      <button type="button" value="staff" aria-pressed="false">{{call .B "staff"}}</button>
-      <button type="button" value="external" aria-pressed="false">{{call .B "external"}}</button>
+    <div class="setting-head">
+      <h3>{{call .B "setPrices"}}</h3>
+      <div class="segmented" data-setting="price">
+        <button type="button" value="student" aria-pressed="true">{{call .B "student"}}</button>
+        <button type="button" value="staff" aria-pressed="false">{{call .B "staff"}}</button>
+        <button type="button" value="external" aria-pressed="false">{{call .B "external"}}</button>
+      </div>
     </div>
   </div>
   <div class="setting">
@@ -169,28 +171,34 @@
     </div>
   </div>
   <div class="setting">
-    <h3>{{call .B "setDiet"}}</h3>
-    <div class="segmented" data-setting="diet">
-      <button type="button" value="" aria-pressed="true">{{call .B "dietAll"}}</button>
-      <button type="button" value="vegetarian" aria-pressed="false">{{call .B "vegetarian"}}</button>
-      <button type="button" value="vegan" aria-pressed="false">{{call .B "vegan"}}</button>
+    <div class="setting-head">
+      <h3>{{call .B "setDiet"}}</h3>
+      <div class="segmented" data-setting="diet">
+        <button type="button" value="" aria-pressed="true">{{call .B "dietAll"}}</button>
+        <button type="button" value="vegetarian" aria-pressed="false">{{call .B "vegetarian"}}</button>
+        <button type="button" value="vegan" aria-pressed="false">{{call .B "vegan"}}</button>
+      </div>
     </div>
   </div>
   <div class="setting">
-    <h3>{{call .B "setOpenNow"}}</h3>
+    <div class="setting-head">
+      <h3>{{call .B "setOpenNow"}}</h3>
+      <div class="segmented" data-setting="open">
+        <button type="button" value="" aria-pressed="true">{{call .B "off"}}</button>
+        <button type="button" value="1" aria-pressed="false">{{call .B "on"}}</button>
+      </div>
+    </div>
     <p>{{call .B "setOpenNowHelp"}}</p>
-    <div class="segmented" data-setting="open">
-      <button type="button" value="" aria-pressed="true">{{call .B "off"}}</button>
-      <button type="button" value="1" aria-pressed="false">{{call .B "on"}}</button>
-    </div>
   </div>
   <div class="setting">
-    <h3>{{call .B "setNear"}}</h3>
-    <p>{{call .B "setNearHelp"}}</p>
-    <div class="segmented" data-setting="near">
-      <button type="button" value="" aria-pressed="true">{{call .B "off"}}</button>
-      <button type="button" value="1" aria-pressed="false">{{call .B "on"}}</button>
+    <div class="setting-head">
+      <h3>{{call .B "setNear"}}</h3>
+      <div class="segmented" data-setting="near">
+        <button type="button" value="" aria-pressed="true">{{call .B "off"}}</button>
+        <button type="button" value="1" aria-pressed="false">{{call .B "on"}}</button>
+      </div>
     </div>
+    <p>{{call .B "setNearHelp"}}</p>
     <p class="setting-error" id="near-error" hidden></p>
   </div>
   <div class="setting">
@@ -207,18 +215,22 @@
     </div>
   </div>
   <div class="setting">
-    <h3>{{call .B "setLanguage"}}</h3>
-    <div class="segmented" data-setting="lang">
-      <button type="button" value="en" aria-pressed="{{eq .Lang "en"}}">English</button>
-      <button type="button" value="de" aria-pressed="{{eq .Lang "de"}}">Deutsch</button>
+    <div class="setting-head">
+      <h3>{{call .B "setLanguage"}}</h3>
+      <div class="segmented" data-setting="lang">
+        <button type="button" value="en" aria-pressed="{{eq .Lang "en"}}">English</button>
+        <button type="button" value="de" aria-pressed="{{eq .Lang "de"}}">Deutsch</button>
+      </div>
     </div>
   </div>
   <div class="setting">
-    <h3>{{call .B "setTheme"}}</h3>
-    <div class="segmented" data-setting="theme">
-      <button type="button" value="system" aria-pressed="true">{{call .B "themeSystem"}}</button>
-      <button type="button" value="light" aria-pressed="false">{{call .B "themeLight"}}</button>
-      <button type="button" value="dark" aria-pressed="false">{{call .B "themeDark"}}</button>
+    <div class="setting-head">
+      <h3>{{call .B "setTheme"}}</h3>
+      <div class="segmented" data-setting="theme">
+        <button type="button" value="system" aria-pressed="true">{{call .B "themeSystem"}}</button>
+        <button type="button" value="light" aria-pressed="false">{{call .B "themeLight"}}</button>
+        <button type="button" value="dark" aria-pressed="false">{{call .B "themeDark"}}</button>
+      </div>
     </div>
   </div>
 </dialog>

@@ -271,6 +271,9 @@ dialog.sheet::backdrop { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4
 .setting { padding: 14px 0; border-top: 1px solid var(--border); display: grid; gap: 10px; }
 .setting:first-of-type { border-top: 0; }
 .setting > .segmented { justify-self: start; }
+/* A heading and its buttons share a line, the buttons at the right edge; if they don't fit,
+   the buttons go under the heading. */
+.setting-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
 .setting h3 { font-size: 0.9rem; font-weight: 600; }
 .setting p { font-size: 0.82rem; color: var(--text-sub); }
 .wrap { display: flex; flex-wrap: wrap; gap: 8px; }
