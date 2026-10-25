@@ -64,9 +64,25 @@ func (s *Server) Handler() http.Handler {
 
 // home renders the main page for the requested (or best) day.
 func (s *Server) home(w http.ResponseWriter, r *http.Request) {
-	settings := readSettings(r)
 	q := r.URL.Query()
-	data := s.buildPage(settings, q.Get("day"), q.Get("meal"), time.Now().In(s.Zone))
+	now := time.Now().In(s.Zone)
+	// A link to a day that has passed (an old bookmark or shared link) moves on to today.
+	// Without menus today, it drops the day instead, so the page picks the next day with
+	// menus and says so. The redirect is temporary, because "today" changes.
+	today := now.Format(time.DateOnly)
+	if day := q.Get("day"); day != "" && day < today {
+		if _, err := time.Parse(time.DateOnly, day); err == nil {
+			if slices.Contains(s.Store.Dates(), today) {
+				q.Set("day", today)
+			} else {
+				q.Del("day")
+			}
+			http.Redirect(w, r, "/?"+q.Encode(), http.StatusFound)
+			return
+		}
+	}
+	settings := readSettings(r)
+	data := s.buildPage(settings, q.Get("day"), q.Get("meal"), now)
 	data.SiteURL = siteURL(r)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store") // menus and settings change; always render fresh
