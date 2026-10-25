@@ -10,7 +10,7 @@ import (
 var texts = map[string]map[string]string{
 	"en": {
 		"search":          "Search dishes",
-		"pageTitle":       "Mensa Finder: ETH and UZH menus in Zurich",
+		"pageTitle":       "Mensaplan Zürich",
 		"pageDescription": "Today's menus of 34 canteens at ETH, UZH and around Zurich on one page, with prices, photos and allergens. Filter for vegetarian and vegan, star your favourites.",
 		"settings":        "Settings",
 		"close":           "Close",
@@ -62,7 +62,7 @@ var texts = map[string]map[string]string{
 	},
 	"de": {
 		"search":          "Gerichte suchen",
-		"pageTitle":       "Mensa Finder: Menüs der ETH- und UZH-Mensen in Zürich",
+		"pageTitle":       "Mensaplan Zürich",
 		"pageDescription": "Die heutigen Menüs von 34 Mensen der ETH, UZH und in Zürich auf einer Seite, mit Preisen, Fotos und Allergenen. Vegetarisch und vegan filtern, Favoriten markieren.",
 		"settings":        "Einstellungen",
 		"close":           "Schliessen",

@@ -1,11 +1,11 @@
-// Mensa Finder in the browser.
+// Mensaplan Zürich in the browser.
 //
 // The server already renders the whole page with every menu of the day. This script only:
 //   1. filters instantly (search, lunch/dinner, and the diet, campus, allergen and "open now"
 //      settings) by hiding elements,
 //   2. opens one dish at a time, animated, centred on screen, with its photo large,
 //   3. applies settings the moment they change and saves them, with favourites and starred
-//      dishes, in the "mf" cookie, which the server reads on the next page load
+//      dishes, in the "mp" cookie, which the server reads on the next page load
 //      (see internal/web/settings.go).
 (() => {
   'use strict';
@@ -20,7 +20,7 @@
   // ---------- the settings cookie ----------
 
   function readSettings() {
-    const match = document.cookie.match(/(?:^|;\s*)mf=([^;]*)/);
+    const match = document.cookie.match(/(?:^|;\s*)mp=([^;]*)/);
     try {
       return match ? JSON.parse(decodeURIComponent(match[1])) : {};
     } catch {
@@ -30,7 +30,7 @@
 
   function saveSettings() {
     const year = 60 * 60 * 24 * 400;
-    document.cookie = `mf=${encodeURIComponent(JSON.stringify(settings))}; path=/; max-age=${year}; samesite=lax`;
+    document.cookie = `mp=${encodeURIComponent(JSON.stringify(settings))}; path=/; max-age=${year}; samesite=lax`;
   }
 
   const settings = readSettings();
@@ -547,8 +547,8 @@
     closeSettings();
   });
   try {
-    if (sessionStorage.getItem('mf-settings-open')) {
-      sessionStorage.removeItem('mf-settings-open');
+    if (sessionStorage.getItem('mp-settings-open')) {
+      sessionStorage.removeItem('mp-settings-open');
       dialog.showModal(); // no animation: it was already open before the reload
     }
   } catch { /* storage unavailable: the sheet just stays closed */ }
@@ -570,7 +570,7 @@
     price: showPrices,
     theme: showTheme,
     lang: () => {
-      try { sessionStorage.setItem('mf-settings-open', '1'); } catch { /* see above */ }
+      try { sessionStorage.setItem('mp-settings-open', '1'); } catch { /* see above */ }
       location.reload();
     },
     star: () => {}, // handled below

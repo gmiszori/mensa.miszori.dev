@@ -1,4 +1,4 @@
-// Mensa Finder: the menus of the ETH, UZH and other canteens in Zurich (and Basel), on one page.
+// Mensaplan Zürich: the menus of the ETH, UZH and other canteens in Zurich (and Basel), on one page.
 //
 // This file wires the parts together:
 //
@@ -16,7 +16,7 @@
 //	DATA_DIR      where menus and photo thumbnails are kept (default "./data")
 //	REFRESH_EVERY how often menus are re-fetched (default "1h")
 //
-// "mensafinder healthcheck" asks a running instance whether it is up (used by Docker, whose
+// "mensaplan healthcheck" asks a running instance whether it is up (used by Docker, whose
 // minimal image has no curl).
 package main
 
@@ -34,13 +34,13 @@ import (
 	"time"
 	_ "time/tzdata" // include the time zone database, so Europe/Zurich works in any container
 
-	"mensafinder/internal/catalog"
-	"mensafinder/internal/eth"
-	"mensafinder/internal/food2050"
-	"mensafinder/internal/menu"
-	"mensafinder/internal/photos"
-	"mensafinder/internal/refresh"
-	"mensafinder/internal/web"
+	"mensaplan/internal/catalog"
+	"mensaplan/internal/eth"
+	"mensaplan/internal/food2050"
+	"mensaplan/internal/menu"
+	"mensaplan/internal/photos"
+	"mensaplan/internal/refresh"
+	"mensaplan/internal/web"
 )
 
 func main() {
@@ -123,7 +123,7 @@ func run(log *slog.Logger) error {
 		close(shutdownDone)
 	}()
 
-	log.Info("Mensa Finder listening", "addr", addr, "data", dataDir)
+	log.Info("Mensaplan Zürich listening", "addr", addr, "data", dataDir)
 	if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}

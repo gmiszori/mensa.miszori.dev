@@ -1,4 +1,4 @@
-# Production setup: Caddy (HTTPS) in front of Mensa Finder, on one server.
+# Production setup: Caddy (HTTPS) in front of Mensaplan Zürich, on one server.
 #
 #   cp .env.example .env      # then set DOMAIN to your domain
 #   docker compose up --build -d
@@ -9,7 +9,7 @@
 # network Caddy joins. Menus and photos are kept in the "data" volume, certificates in
 # "caddy_data", so restarts and updates keep both.
 services:
-  mensafinder:
+  mensaplan:
     build: .
     environment:
       REFRESH_EVERY: ${REFRESH_EVERY:-1h}
@@ -21,7 +21,7 @@ services:
       driver: json-file
       options: { max-size: 10m, max-file: "3" } # keep logs from filling the disk
     healthcheck:
-      test: ["CMD", "/mensafinder", "healthcheck"]
+      test: ["CMD", "/mensaplan", "healthcheck"]
       interval: 30s
       timeout: 5s
       start_period: 10s
@@ -40,7 +40,7 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      mensafinder:
+      mensaplan:
         condition: service_healthy
     restart: unless-stopped
     mem_limit: 256m

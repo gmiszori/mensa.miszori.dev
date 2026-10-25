@@ -1,4 +1,4 @@
-// Package web serves the Mensa Finder website: one HTML page rendered on every request from
+// Package web serves the Mensaplan Zürich website: one HTML page rendered on every request from
 // the current menus, plus its CSS, JavaScript, fonts and dish photos.
 package web
 
@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
-	"mensafinder/internal/catalog"
-	"mensafinder/internal/menu"
+	"mensaplan/internal/catalog"
+	"mensaplan/internal/menu"
 )
 
 //go:embed templates static

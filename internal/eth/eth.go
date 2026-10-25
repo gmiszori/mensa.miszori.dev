@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"mensafinder/internal/menu"
+	"mensaplan/internal/menu"
 )
 
 // BaseURL is the API root. clientID is the identification ETH's own website sends; the API

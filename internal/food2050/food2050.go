@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	"mensafinder/internal/menu"
+	"mensaplan/internal/menu"
 )
 
 // Client fetches pages. Use New.
@@ -192,7 +192,7 @@ func (c *Client) fetch(ctx context.Context, pageURL string) (*nextData, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "MensaFinder/1.0")
+	req.Header.Set("User-Agent", "Mensaplan/1.0")
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return nil, err

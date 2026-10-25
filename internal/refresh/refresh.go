@@ -15,11 +15,11 @@ import (
 	"sync"
 	"time"
 
-	"mensafinder/internal/catalog"
-	"mensafinder/internal/eth"
-	"mensafinder/internal/food2050"
-	"mensafinder/internal/menu"
-	"mensafinder/internal/photos"
+	"mensaplan/internal/catalog"
+	"mensaplan/internal/eth"
+	"mensaplan/internal/food2050"
+	"mensaplan/internal/menu"
+	"mensaplan/internal/photos"
 )
 
 // Refresher holds everything a refresh needs.

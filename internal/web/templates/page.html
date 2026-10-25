@@ -14,14 +14,14 @@
   <!-- How the link looks when shared in a message or post (Open Graph, also read by
        iMessage, WhatsApp, Slack, Telegram, ...). -->
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Mensa Finder">
+  <meta property="og:site_name" content="Mensaplan Zürich">
   <meta property="og:title" content="{{call .T "pageTitle"}}">
   <meta property="og:description" content="{{call .T "pageDescription"}}">
   <meta property="og:url" content="{{.SiteURL}}/">
   <meta property="og:image" content="{{.SiteURL}}/static/og.png?v={{.Version}}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Mensa Finder: the menus of ETH and UZH canteens in Zurich on one page">
+  <meta property="og:image:alt" content="Mensaplan Zürich: the menus of ETH and UZH canteens in Zurich on one page">
   <meta property="og:locale" content="{{if eq .Lang "de"}}de_CH{{else}}en_US{{end}}">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="/static/app.css?v={{.Version}}">
@@ -37,7 +37,7 @@
 
 <div class="container">
   <header class="site-header">
-    <a class="brand" href="/">Mensa <span>Finder</span></a>
+    <a class="brand" href="/"><img src="/static/icon.svg" width="26" height="26" alt=""><span class="name">Mensaplan <span>Zürich</span></span></a>
     <button class="icon-btn" type="button" id="open-settings" aria-label="{{call .T "settings"}}"><svg><use href="#i-settings"/></svg></button>
   </header>
 </div>

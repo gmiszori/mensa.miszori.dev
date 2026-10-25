@@ -1,7 +1,7 @@
-# Mensa Finder
+# Mensaplan Zürich
 
-Mensa Finder shows the menus of the ETH, UZH and other canteens in Zurich (and ETH Basel) on
-one page, with prices, photos and allergens. It started as *UniEats* at VISCon Hackathon 2026
+Mensaplan Zürich shows the menus of the ETH, UZH and other canteens in the city (and ETH Basel)
+on one page, with prices, photos and allergens. It started as *UniEats* at VISCon Hackathon 2026
 (team VISard Lizards). It was then rewritten from scratch as one small Go program with no
 database and no accounts. The code was written with AI under my direction.
 
@@ -50,11 +50,11 @@ go test ./...
 ## How it works
 
 ```
-                                                  every hour
-Browser ─► proxy ─► Caddy (HTTPS) ─► Mensa Finder ◄──────────── ETH menu API
-                                     (Go, one binary)  ◄─────── app.food2050.ch (UZH and other ZFV canteens)
-                                           │
-                                           └─ data/menus.json, data/photos/
+                                                      every hour
+Browser ─► proxy ─► Caddy (HTTPS) ─► Mensaplan Zürich ◄──────────── ETH menu API
+                                     (Go, one binary) ◄──────────── app.food2050.ch (UZH and other ZFV canteens)
+                                            │
+                                            └─ data/menus.json, data/photos/
 ```
 
 1. **Fetching.** On start and every hour, the program asks both sources for the current week and
@@ -92,7 +92,7 @@ makes it the address to watch with an uptime monitor.
 Everything runs in Docker on one server, behind the shared
 [webserver-proxy](https://github.com/gmiszori/webserver-proxy). The proxy owns ports 80 and 443
 and passes this domain's traffic to Caddy without decrypting it. Caddy gets and renews the HTTPS
-certificate by itself and passes requests on to Mensa Finder. Neither is reachable from outside
+certificate by itself and passes requests on to Mensaplan Zürich. Neither is reachable from outside
 except through the proxy.
 
 1. Point the domain's DNS A (and AAAA) record at the server.

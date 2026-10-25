@@ -1,4 +1,4 @@
-module mensafinder
+module mensaplan
 
 go 1.27
 

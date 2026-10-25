@@ -7,13 +7,13 @@ import (
 	"slices"
 	"strings"
 
-	"mensafinder/internal/menu"
+	"mensaplan/internal/menu"
 )
 
 // cookieName is the cookie that holds a visitor's settings. There are no accounts: settings
 // live only in the visitor's browser. app.js writes the cookie, the server reads it to render
 // the page in the visitor's language, with their prices, favourites first, and so on.
-const cookieName = "mf"
+const cookieName = "mp"
 
 // Settings is the cookie's content, stored as URL-encoded JSON.
 type Settings struct {

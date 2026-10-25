@@ -1,4 +1,4 @@
-/* Mensa Finder styles, built on the miszori.dev design system tokens. */
+/* Mensaplan Zürich styles, built on the miszori.dev design system tokens. */
 
 @font-face {
   font-family: 'Inter Variable';
@@ -85,8 +85,9 @@ button { cursor: pointer; }
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 16px 0 8px;
 }
-.brand { font-weight: 800; font-size: 1.35rem; letter-spacing: -0.02em; text-decoration: none; color: var(--text); }
-.brand span {
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.35rem; letter-spacing: -0.02em; text-decoration: none; color: var(--text); }
+.brand img { flex-shrink: 0; }
+.brand .name span {
   background: linear-gradient(135deg, var(--accent), var(--gradient-end));
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
 }

@@ -21,7 +21,7 @@ body {
   background: radial-gradient(circle, rgba(79, 70, 229, 0.16), transparent 68%); }
 .glow.b { top: auto; right: auto; bottom: -360px; left: -260px; background: radial-gradient(circle, rgba(147, 51, 234, 0.08), transparent 68%); }
 .left { position: relative; flex: 1; display: flex; flex-direction: column; gap: 26px; }
-.logo { display: flex; align-items: center; gap: 16px; }
+.logo { display: flex; align-items: flex-start; gap: 16px; }
 .logo svg { width: 64px; height: 64px; }
 h1 { font-size: 76px; font-weight: 800; letter-spacing: -0.035em; line-height: 1; }
 h1 span { background: linear-gradient(135deg, var(--accent), var(--end)); -webkit-background-clip: text; background-clip: text; color: transparent; }
@@ -51,9 +51,9 @@ h1 span { background: linear-gradient(135deg, var(--accent), var(--end)); -webki
 <div class="left">
   <div class="logo">
     <svg viewBox="0 0 32 32"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f46e5"/><stop offset="1" stop-color="#9333ea"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#g)"/><circle cx="16" cy="16" r="8" fill="none" stroke="#fff" stroke-width="2.5"/><circle cx="16" cy="16" r="3.5" fill="#fff"/></svg>
-    <h1>Mensa <span>Finder</span></h1>
+    <h1>Mensaplan<br><span>Zürich</span></h1>
   </div>
-  <p class="lede">Today's menus of the ETH and UZH canteens in Zurich, on one page.</p>
+  <p class="lede">Today's menus of the ETH and UZH canteens, on one page.</p>
   <div class="pills"><span class="pill">34 canteens</span><span class="pill">prices</span><span class="pill">photos</span><span class="pill">allergens</span></div>
   <p class="url">mensa.miszori.dev</p>
 </div>

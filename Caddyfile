@@ -1,5 +1,5 @@
 # Caddy is the public web server: it gets and renews the HTTPS certificate for DOMAIN by itself
-# (from Let's Encrypt), compresses responses and passes every request on to Mensa Finder, which
+# (from Let's Encrypt), compresses responses and passes every request on to Mensaplan Zürich, which
 # is only reachable inside the Docker network. Ports 80 and 443 belong to the shared proxy
 # (github.com/gmiszori/webserver-proxy), which passes this domain's TLS through untouched.
 #
@@ -33,7 +33,7 @@
 	# Caddy leaves cookies and authorization headers out of these logs.
 	log
 
-	reverse_proxy mensafinder:8080
+	reverse_proxy mensaplan:8080
 }
 
 # The HTTP->HTTPS redirect, spelled out: Caddy's automatic redirect server doesn't get the
