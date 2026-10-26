@@ -279,14 +279,16 @@
   const isFavourite = (card) => card.querySelector('[data-favourite]').getAttribute('aria-pressed') === 'true';
   const starredCount = (card) => card.querySelectorAll(`.dishes[data-meal="${state.meal}"] .dish[data-starred]`).length;
 
-  // Sorted by distance: nearest first. Otherwise favourite canteens first, those with more
-  // starred dishes in this meal before the others; then the catalog's order.
+  // Favourite canteens first, then the others. Sorted by distance, each part has the nearest
+  // first. Otherwise favourites with more starred dishes in this meal come before the others,
+  // and the rest is in the catalog's order.
   function rankCards() {
-    if (settings.near === true && here) return [...cards].sort((a, b) => distance(a) - distance(b));
+    const near = settings.near === true && here;
     return [...cards].sort((a, b) => {
       const fa = isFavourite(a);
       const fb = isFavourite(b);
       if (fa !== fb) return fa ? -1 : 1;
+      if (near) return distance(a) - distance(b);
       return (fa ? starredCount(b) - starredCount(a) : 0) || (a.dataset.order - b.dataset.order);
     });
   }
