@@ -38,8 +38,10 @@ const Size = 168
 const LargeWidth = 1080
 
 // minSide sorts out placeholders: for some dishes ETH returns a small caterer logo instead of
-// a photo. Real photos are well over 1000 pixels; the logos are a few hundred.
-const minSide = 400
+// a photo. The logos seen so far are 326 pixels on their short side, the smallest real ETH
+// photos 365. Only sources listed in Handler.LogoSources are checked: UZH sends real photos
+// as small as 480x270.
+const minSide = 350
 
 // Limits for what a source may send. Decoding needs about 4 bytes per pixel, so a huge image
 // could use gigabytes of memory; real photos are 2-3 megapixels and well under 1 MB.
@@ -70,6 +72,9 @@ type Handler struct {
 	// URLs come from the menu sources; this keeps a broken or hostile source from making the
 	// server request other addresses, such as ones inside the Docker network.
 	Allowed []string
+	// LogoSources lists the URL prefixes whose small images are logos rather than photos
+	// (see minSide). Images from other sources are shown whatever their size.
+	LogoSources []string
 
 	mu       sync.Mutex
 	inFlight map[string]*download // photos being downloaded right now, by key
@@ -92,7 +97,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	path := filepath.Join(h.Dir, name+".jpg")
-	none := filepath.Join(h.Dir, key+".none") // marks keys that turned out not to be photos
+	none := filepath.Join(h.Dir, key+".logo") // marks keys that turned out not to be photos
 	if _, err := os.Stat(none); err == nil {
 		http.NotFound(w, r)
 		return
@@ -165,7 +170,11 @@ func (h *Handler) fetchOnce(url, key string) error {
 
 // allowed reports whether a photo may be downloaded from url.
 func (h *Handler) allowed(url string) bool {
-	for _, prefix := range h.Allowed {
+	return hasPrefix(url, h.Allowed)
+}
+
+func hasPrefix(url string, prefixes []string) bool {
+	for _, prefix := range prefixes {
 		if strings.HasPrefix(url, prefix) {
 			return true
 		}
@@ -215,7 +224,7 @@ func (h *Handler) fetch(url, key string) error {
 
 	b := src.Bounds()
 	side := min(b.Dx(), b.Dy())
-	if side < minSide {
+	if side < minSide && hasPrefix(url, h.LogoSources) {
 		return errNotAPhoto
 	}
 
@@ -271,6 +280,10 @@ func (h *Handler) Prune() (removed int, err error) {
 		if strings.HasSuffix(name, ".tmp") {
 			info, err := e.Info()
 			stale = err == nil && time.Since(info.ModTime()) > time.Hour
+		} else if strings.HasSuffix(name, ".none") {
+			// Markers of earlier versions, which also turned away small real photos: removed,
+			// so those photos are tried again.
+			stale = true
 		} else {
 			key, _, _ := strings.Cut(name, ".")
 			key = strings.TrimSuffix(key, "-large")

@@ -8,28 +8,35 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 )
 
 func TestHandler(t *testing.T) {
-	// A fake photo server: a large picture and a small logo.
+	// A fake photo server: a large picture, and small images under /small/ (a logo, if the
+	// source is one that sends logos).
 	source := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		side := 1400
-		if r.URL.Path == "/logo" {
+		if strings.HasPrefix(r.URL.Path, "/small/") {
 			side = 300
 		}
 		_ = jpeg.Encode(w, image.NewRGBA(image.Rect(0, 0, side, side*2/3)), nil)
 	}))
 	defer source.Close()
 
-	known := map[string]string{"aa11": source.URL + "/photo", "bb22": source.URL + "/logo"}
+	known := map[string]string{
+		"aa11": source.URL + "/photo",
+		"bb22": source.URL + "/small/logos/sv",    // from a source that sends logos
+		"dd44": source.URL + "/small/photos/soup", // a small real photo from another source
+	}
 	h := &Handler{
-		Dir:     t.TempDir(),
-		Lookup:  func(key string) (string, bool) { url, ok := known[key]; return url, ok },
-		HTTP:    source.Client(),
-		Allowed: []string{source.URL + "/"},
+		Dir:         t.TempDir(),
+		Lookup:      func(key string) (string, bool) { url, ok := known[key]; return url, ok },
+		HTTP:        source.Client(),
+		Allowed:     []string{source.URL + "/"},
+		LogoSources: []string{source.URL + "/small/logos/"},
 	}
 	mux := http.NewServeMux()
 	mux.Handle("GET /photos/{file}", h)
@@ -65,6 +72,7 @@ func TestHandler(t *testing.T) {
 	}
 
 	for path, want := range map[string]int{
+		"/photos/dd44.jpg":       http.StatusOK,
 		"/photos/bb22.jpg":       http.StatusNotFound, // a logo, not a photo
 		"/photos/cc33.jpg":       http.StatusNotFound, // not a dish on the menu
 		"/photos/..%2Fetc.jpg":   http.StatusNotFound, // not a valid key
@@ -125,7 +133,8 @@ func TestOneDownloadPerPhoto(t *testing.T) {
 
 func TestPrune(t *testing.T) {
 	dir := t.TempDir()
-	for _, name := range []string{"aa.jpg", "aa-large.jpg", "bb.jpg", "bb-large.jpg", "cc.none"} {
+	// cc.logo marks a dish no longer on the menu; aa.none is a marker of an earlier version.
+	for _, name := range []string{"aa.jpg", "aa-large.jpg", "aa.none", "bb.jpg", "bb-large.jpg", "cc.logo"} {
 		if err := os.WriteFile(filepath.Join(dir, name), nil, 0o644); err != nil {
 			t.Fatal(err)
 		}
@@ -136,8 +145,8 @@ func TestPrune(t *testing.T) {
 		t.Fatal(err)
 	}
 	left, _ := os.ReadDir(dir)
-	if removed != 3 || len(left) != 2 {
-		t.Errorf("removed %d, %d files left; want 3 removed and aa's two files kept", removed, len(left))
+	if removed != 4 || len(left) != 2 {
+		t.Errorf("removed %d, %d files left; want 4 removed and aa's two photos kept", removed, len(left))
 	}
 }
 

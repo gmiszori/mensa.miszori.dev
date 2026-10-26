@@ -91,7 +91,8 @@ func run(log *slog.Logger) error {
 
 	photoHandler := &photos.Handler{
 		Dir: filepath.Join(dataDir, "photos"), Lookup: store.PhotoURL, HTTP: client,
-		Allowed: []string{eth.BaseURL + "/images/", food2050.PhotoURL},
+		Allowed:     []string{eth.BaseURL + "/images/", food2050.PhotoURL},
+		LogoSources: []string{eth.BaseURL + "/images/"},
 	}
 
 	// Menus are refreshed in the background; the site serves what the store has meanwhile.
