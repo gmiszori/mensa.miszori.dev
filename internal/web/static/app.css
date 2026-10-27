@@ -1,10 +1,10 @@
-/* Mensaplan Zürich styles, built on the miszori.dev design system tokens with its own
-   blue gradient (#1d4ed8 to #0284c7) in place of indigo to cyan. */
+/* Mensaplan Zürich styles in the miszori.dev brand: black and white, Instrument Sans, and green,
+   the palette colour that means this project. */
 
 @font-face {
-  font-family: 'Inter Variable';
-  src: url('fonts/inter-latin-wght-normal.woff2') format('woff2');
-  font-weight: 100 900;
+  font-family: 'Instrument Sans Variable';
+  src: url('fonts/instrument-sans-latin-wght-normal.woff2') format('woff2');
+  font-weight: 400 700;
   font-display: swap;
 }
 @font-face {
@@ -15,54 +15,53 @@
 }
 
 /* ---------- Tokens (light first, dark overrides) ---------- */
+/* The brand's green: --green-mark stands on the page itself (the open dot), the
+   vivid green in light and its bright version in dark; --green-band is the tint behind a
+   starred dish, the brand's deep green in dark. */
 :root {
   --bg: #ffffff;
-  --surface: rgba(255, 255, 255, 0.8);
-  --border: rgba(15, 23, 42, 0.18);
-  --text: #000000;
-  --text-muted: #1f2630;
-  --text-sub: #525d6c;
-  --accent: #1d4ed8;
-  --gradient-end: #0284c7;
-  --pill-bg: rgba(15, 23, 42, 0.06);
-  --card-shadow: 0 10px 30px -12px rgba(15, 23, 42, 0.12);
+  --text: #0a0a0a;
+  --text-muted: #454545;
+  --text-sub: #6b6b6b;
+  --line: #e4e4e4;
+  --border: #c8c8c8;
+  --pill-bg: rgba(0, 0, 0, 0.04);
+  --green-mark: #19c37d;
+  --green-band: #e3f8ee;
 
-  --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Instrument Sans Variable', 'Instrument Sans', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
   --radius-xs: 6px;
   --radius-sm: 12px;
   --radius-md: 16px;
   --radius-pill: 999px;
-  --transition: transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease,
-    color 0.3s ease, box-shadow 0.3s ease;
+  --transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     --bg: #000000;
-    --surface: #0a0a0d;
-    --border: rgba(255, 255, 255, 0.17);
-    --text: #ffffff;
-    --text-muted: #e0e3e9;
-    --text-sub: #a9b0be;
-    --accent: #60a5fa;
-    --gradient-end: #38bdf8;
+    --text: #f5f5f5;
+    --text-muted: #c4c4c4;
+    --text-sub: #8f8f8f;
+    --line: #262626;
+    --border: #3a3a3a;
     --pill-bg: rgba(255, 255, 255, 0.06);
-    --card-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    --green-mark: #3ddc97;
+    --green-band: #062e1f;
     color-scheme: dark;
   }
 }
 :root[data-theme='dark'] {
   --bg: #000000;
-  --surface: #0a0a0d;
-  --border: rgba(255, 255, 255, 0.17);
-  --text: #ffffff;
-  --text-muted: #e0e3e9;
-  --text-sub: #a9b0be;
-  --accent: #60a5fa;
-  --gradient-end: #38bdf8;
+  --text: #f5f5f5;
+  --text-muted: #c4c4c4;
+  --text-sub: #8f8f8f;
+  --line: #262626;
+  --border: #3a3a3a;
   --pill-bg: rgba(255, 255, 255, 0.06);
-  --card-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  --green-mark: #3ddc97;
+  --green-band: #062e1f;
   color-scheme: dark;
 }
 
@@ -76,10 +75,12 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   background: var(--bg); color: var(--text); font-family: var(--font-sans);
   font-size: 0.98rem; line-height: 1.5;
+  display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh;
 }
+body > .container, body > main { width: 100%; }
 button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
 .mono { font-family: var(--font-mono); }
 .container { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
 
@@ -88,16 +89,12 @@ button { cursor: pointer; }
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 16px 0 8px;
 }
-.brand { font-weight: 800; font-size: 1.35rem; letter-spacing: -0.02em; text-decoration: none; color: var(--text); }
-.brand .name span {
-  background: linear-gradient(135deg, var(--accent), var(--gradient-end));
-  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-}
+.brand { font-weight: 700; font-size: 1.35rem; letter-spacing: -0.03em; text-decoration: none; color: var(--text); }
 .icon-btn {
   width: 40px; height: 40px; border-radius: var(--radius-pill); border: 1px solid var(--border);
   background: transparent; display: grid; place-items: center; transition: var(--transition);
 }
-.icon-btn:hover { border-color: var(--accent); }
+.icon-btn:hover { border-color: var(--text); }
 .icon-btn svg, .star svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ---------- Sticky toolbar: search, and the day and meal picker ---------- */
@@ -119,12 +116,12 @@ button { cursor: pointer; }
   border: 1px solid var(--border); background: var(--pill-bg); font-size: 0.85rem; font-weight: 600;
   white-space: nowrap; transition: var(--transition);
 }
-.when-button:hover, .when-button[aria-expanded='true'] { border-color: var(--accent); }
+.when-button:hover, .when-button[aria-expanded='true'] { border-color: var(--text); }
 .when-button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .when-panel {
   position: absolute; right: 0; top: calc(100% + 8px); width: min(320px, calc(100vw - 32px));
   background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md);
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.25); padding: 14px; display: grid; gap: 12px;
+  padding: 14px; display: grid; gap: 12px;
 }
 .when-panel .segmented { justify-self: start; }
 .day-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -142,7 +139,7 @@ button { cursor: pointer; }
   width: 100%; min-width: 0; padding: 10px 16px; border-radius: var(--radius-pill); border: 1px solid var(--border);
   background: var(--pill-bg); outline: none; transition: var(--transition);
 }
-.search:focus { border-color: var(--accent); }
+.search:focus { border-color: var(--text); }
 
 .chip {
   flex-shrink: 0; padding: 7px 14px; border-radius: var(--radius-pill); border: 1px solid var(--border);
@@ -162,39 +159,36 @@ button { cursor: pointer; }
 .canteens > .column { display: grid; gap: 16px; align-content: start; min-width: 0; }
 
 .canteen {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
-  box-shadow: var(--card-shadow); padding: 18px 18px 6px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: 18px 18px 6px;
 }
 .canteen-head { display: flex; align-items: flex-start; gap: 8px; }
 .canteen-title { flex: 1; min-width: 0; }
 .canteen h2 { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.3; }
 .canteen-meta { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-sub); margin-top: 2px; }
-.canteen-meta a { color: inherit; text-decoration: underline; text-decoration-color: var(--border); text-underline-offset: 3px; }
-.canteen-meta a:hover { color: var(--accent); }
+.canteen-meta a { color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.canteen-meta a:hover { color: var(--text); }
 .canteen .dishes { margin-top: 8px; }
 .status { font-size: 0.78rem; font-weight: 600; color: var(--text-sub); white-space: nowrap; padding-top: 3px; }
 .status.open { color: var(--text); }
-.status.open::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-right: 6px; vertical-align: 1px; }
+.status.open::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--green-mark); margin-right: 6px; vertical-align: 1px; }
 
 .star { border: 0; background: transparent; color: var(--text-sub); padding: 2px; border-radius: var(--radius-pill); line-height: 0; transition: var(--transition); }
-.star:hover { color: var(--accent); }
-.star[aria-pressed='true'] { color: var(--accent); }
+.star:hover { color: var(--text); }
+.star[aria-pressed='true'] { color: var(--text); }
 .star[aria-pressed='true'] svg { fill: currentColor; }
 
-.service { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-sub); letter-spacing: 0.06em; text-transform: uppercase; margin: 14px 0 2px; }
+.service { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); margin: 14px 0 2px; }
 
 .dishes { list-style: none; }
-.dish { border-top: 1px solid var(--border); }
+.dish { border-top: 1px solid var(--line); }
 .dish:first-child { border-top: 0; }
-/* A starred dish sits on a faint band of the gradient, across the whole card. */
-.dish[data-starred] {
-  margin: 0 -18px; padding: 0 18px;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 10%, transparent), color-mix(in srgb, var(--gradient-end) 6%, transparent));
-}
+/* A starred dish sits on a green band across the whole card. */
+.dish[data-starred] { margin: 0 -18px; padding: 0 18px; background: var(--green-band); }
 .dish.after-starred, .dish[data-starred] { border-top-color: transparent; }
 /* Off-budget dishes, when the visitor chose to see them below the others. */
-.over-budget { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-sub); text-transform: uppercase;
-  letter-spacing: 0.06em; padding: 14px 0 4px; border-top: 1px solid var(--border); }
+.over-budget { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); padding: 14px 0 4px;
+  border-top: 1px solid var(--line); }
 .over-budget:first-child { border-top: 0; padding-top: 4px; }
 .over-budget + .dish { border-top-color: transparent; }
 .dish details > summary { list-style: none; cursor: pointer; }
@@ -207,7 +201,7 @@ button { cursor: pointer; }
 details.expanded .thumb { display: none; }
 details.expanded .dish-row.has-photo { grid-template-columns: 1fr auto; }
 .dish-name { font-weight: 600; line-height: 1.35; }
-.dish-name .starred-mark { color: var(--accent); display: none; }
+.dish-name .starred-mark { display: none; }
 .dish[data-starred] .starred-mark { display: inline; }
 .dish-name, .dish-desc { min-width: 0; }
 .dish-desc { color: var(--text-sub); font-size: 0.85rem; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -216,17 +210,17 @@ details.expanded .dish-row.has-photo { grid-template-columns: 1fr auto; }
 .price { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 0.9rem; font-weight: 500; text-align: right; white-space: nowrap; }
 .price small { font-size: inherit; color: var(--text-sub); }
 .dish-tags { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
-.tag { font-family: var(--font-mono); font-size: 0.7rem; background: var(--border); color: var(--text); padding: 1px 7px; border-radius: var(--radius-xs); }
+.tag { font-family: var(--font-mono); font-size: 0.7rem; background: var(--line); color: var(--text); padding: 1px 7px; border-radius: var(--radius-xs); }
 
 .dish-detail { padding: 0 0 12px; font-size: 0.85rem; color: var(--text-muted); display: grid; gap: 6px; }
-.dish-detail dt { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.06em; }
+.dish-detail dt { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); }
 .dish-detail .prices { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .dish-detail .actions { display: flex; gap: 8px; }
 [data-star][aria-pressed='true'] .star-off, [data-star]:not([aria-pressed='true']) .star-on { display: none; }
 
 .no-menu summary { cursor: pointer; color: var(--text-sub); font-size: 0.9rem; padding: 0 0 16px; }
 .no-menu ul { list-style: none; color: var(--text-muted); font-size: 0.9rem; padding-bottom: 16px; }
-.no-menu li { padding: 6px 0; border-top: 1px solid var(--border); }
+.no-menu li { padding: 6px 0; border-top: 1px solid var(--line); }
 .empty { color: var(--text-sub); padding: 24px 0; text-align: center; }
 /* ---------- Placeholder cards while app.js applies the settings (see boot.js) ---------- */
 .skeletons { display: none; gap: 16px; padding: 16px 0 32px; }
@@ -235,24 +229,38 @@ html.loading #canteens, html.loading #no-menu, html.loading #no-results,
 html.loading #starred-hits, html.loading #hidden-count { display: none; }
 @media (min-width: 900px) { .skeletons { grid-template-columns: 1fr 1fr; align-items: start; } }
 .skeleton-card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
-  box-shadow: var(--card-shadow); padding: 18px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: 18px;
 }
 .sk {
   border-radius: var(--radius-xs);
-  background: linear-gradient(90deg, var(--pill-bg) 25%, var(--border) 50%, var(--pill-bg) 75%) 0 0 / 300% 100%;
+  background: linear-gradient(90deg, var(--pill-bg) 25%, var(--line) 50%, var(--pill-bg) 75%) 0 0 / 300% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
 }
 .sk-title { width: 55%; height: 20px; }
 .sk-meta { width: 35%; height: 12px; margin: 8px 0 14px; }
-.sk-row { display: flex; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); }
+.sk-row { display: flex; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
 .sk-meta + .sk-row { border-top: 0; }
 .sk-thumb { width: 56px; height: 56px; border-radius: var(--radius-sm); flex-shrink: 0; }
 .sk-lines { flex: 1; display: grid; gap: 8px; align-content: center; }
 .sk-line { height: 14px; }
 .sk-line.short { width: 70%; height: 12px; }
 @keyframes shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
-.site-footer { color: var(--text-sub); font-size: 0.8rem; padding: 16px 16px 40px; text-align: center; }
+/* The project's footer: where the menus come from, and the endorsement "by miszori.dev". It
+   sits at the bottom of the window when the menus are shorter than it, and its hairline runs
+   across the whole window like the toolbar's. */
+.site-footer { margin-top: auto; border-top: 1px solid var(--border); font-size: 14px; color: var(--text-sub); }
+.footer-inner {
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px 16px;
+  padding-top: 18px; padding-bottom: 40px;
+}
+.endorse { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; white-space: nowrap; }
+.endorse a { color: var(--text); font-weight: 600; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.endorse a:hover { text-decoration-thickness: 2px; }
+/* The GM tile is drawn from miszori.dev's favicon.svg, so its letters sit exactly in the middle. */
+.gm-tile { display: block; width: 20px; height: 20px; }
+.gm-tile .gm-bg { fill: var(--text); }
+.gm-tile .gm-letters { fill: var(--bg); }
 
 /* ---------- Settings sheet ---------- */
 dialog.sheet {
@@ -261,14 +269,14 @@ dialog.sheet {
   overflow-y: auto; overscroll-behavior: contain;
 }
 @media (min-width: 700px) { dialog.sheet { margin: auto; border-radius: var(--radius-md); } }
-dialog.sheet::backdrop { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); }
+dialog.sheet::backdrop { background: rgba(0, 0, 0, 0.5); }
 /* The title and close button stay at the top while the settings scroll beneath them. */
 .sheet-head {
   position: sticky; top: 0; z-index: 1; background: var(--bg);
   display: flex; justify-content: space-between; align-items: center; padding: 20px 0 12px;
 }
-.sheet h2 { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; }
-.setting { padding: 14px 0; border-top: 1px solid var(--border); display: grid; gap: 10px; }
+.sheet h2 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.03em; }
+.setting { padding: 14px 0; border-top: 1px solid var(--line); display: grid; gap: 10px; }
 .setting:first-of-type { border-top: 0; }
 .setting > .segmented { justify-self: start; }
 /* A heading and its buttons share a line, the buttons at the right edge; if they don't fit,
@@ -278,10 +286,10 @@ dialog.sheet::backdrop { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4
 .setting p { font-size: 0.82rem; color: var(--text-sub); }
 .wrap { display: flex; flex-wrap: wrap; gap: 8px; }
 .budget { display: flex; align-items: center; gap: 14px; }
-.budget input { flex: 1; min-width: 0; accent-color: var(--accent); }
+.budget input { flex: 1; min-width: 0; accent-color: var(--text); }
 .budget output { font-family: var(--font-mono); font-size: 0.85rem; font-variant-numeric: tabular-nums; min-width: 6.5em; text-align: right; }
 .check { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; cursor: pointer; justify-self: start; }
-.check input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+.check input { width: 18px; height: 18px; margin: 0; accent-color: var(--text); }
 .check:has(input:disabled) { color: var(--text-sub); cursor: default; }
 .setting .setting-error { color: var(--text-muted); }
 

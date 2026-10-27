@@ -6,7 +6,8 @@
   <meta name="color-scheme" content="light dark">
   <title>{{call .T "pageTitle"}}</title>
   <meta name="description" content="{{call .T "pageDescription"}}">
-  <meta name="theme-color" content="#1d4ed8">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
   <link rel="icon" href="/favicon.ico" sizes="48x48">
   <link rel="icon" href="/static/icon-32.png" type="image/png" sizes="32x32">
   <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
@@ -39,7 +40,7 @@
 
 <div class="container">
   <header class="site-header">
-    <a class="brand" href="/"><span class="name">Mensaplan <span>Zürich</span></span></a>
+    <a class="brand" href="/">Mensaplan Zürich</a>
     <button class="icon-btn" type="button" id="open-settings" aria-label="{{call .T "settings"}}" data-i18n="aria-label:settings"><svg><use href="#i-settings"/></svg></button>
   </header>
 </div>
@@ -136,7 +137,12 @@
   </details>
 </main>
 
-<footer class="container site-footer">{{.Footer}}</footer>
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <span>{{.Footer}}</span>
+    <span class="endorse">by <a href="https://miszori.dev">miszori.dev</a><svg class="gm-tile" viewBox="0 0 64 64" aria-hidden="true"><path class="gm-bg" d="M14,0 h36 a14,14 0 0 1 14,14 v36 a14,14 0 0 1 -14,14 h-36 a14,14 0 0 1 -14,-14 v-36 a14,14 0 0 1 14,-14"/><path class="gm-letters" transform="translate(-0.0625 0.0625)" d="M21.4 42.3L21.4 42.3Q18.1 42.3 15.7 41Q13.4 39.7 12.1 37.4Q10.8 35.1 10.8 31.9L10.8 31.9Q10.8 28.9 12.1 26.5Q13.4 24.2 15.7 22.9Q18 21.6 21 21.6L21 21.6Q23.5 21.6 25.5 22.5Q27.4 23.4 28.7 24.9Q29.9 26.5 30.1 28.5L30.1 28.5L25.8 28.5Q25.5 26.9 24.2 25.9Q23 25 21.1 25L21.1 25Q19.3 25 18 25.8Q16.7 26.6 15.9 28.2Q15.2 29.7 15.2 31.9L15.2 31.9Q15.2 34.1 15.9 35.7Q16.7 37.3 18.1 38.1Q19.5 38.9 21.6 38.9L21.6 38.9Q23.2 38.9 24.4 38.5L24.4 38.5Q25.4 38.2 26 37.6L26 37.6L26 34.3L21.5 34.3L21.5 31L30.3 31L30.3 38.9Q28.7 40.6 26.5 41.4Q24.4 42.3 21.4 42.3ZM35.2 42L31.1 42L31.1 21.8L37.8 21.8L42.2 37L46.6 21.8L53.3 21.8L53.3 42L49.1 42L49.1 25.6L44.3 42L39.9 42L35.2 25.6L35.2 42Z"/></svg></span>
+  </div>
+</footer>
 
 <dialog class="sheet" id="settings">
   <div class="sheet-head">
