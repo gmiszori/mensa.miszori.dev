@@ -30,6 +30,9 @@ function today() {
   }).formatToParts(new Date()).map((p) => [p.type, p.value]));
   return `${parts.year}-${parts.month}-${parts.day}`;
 }
+// The server's protective headers (see securityHeaders in server.go), kept with a saved page so
+// it is just as protected offline.
+const SECURITY_HEADERS = ['Content-Security-Policy', 'X-Content-Type-Options', 'Referrer-Policy', 'Permissions-Policy'];
 const pageURL = (day) => new URL(`/?day=${day}`, self.location).href;
 const dayOf = (url) => new URL(url).searchParams.get('day');
 const photosOn = (html) => (html.match(/\/photos\/[0-9a-f]+(?:-large)?\.jpg/g) || [])
@@ -59,33 +62,24 @@ async function save(days) {
   const pages = await caches.open(PAGES);
   for (const day of days) await savePage(pages, day);
   await removePages(days);
-
-  const wanted = new Set();
-  for (const request of await pages.keys()) {
-    for (const url of photosOn(await (await pages.match(request)).text())) wanted.add(url);
-  }
-  const photos = await caches.open(PHOTOS);
-  const have = new Set((await photos.keys()).map((r) => r.url));
-  for (const url of have) {
-    if (!wanted.has(url)) await photos.delete(url); // no longer on a saved menu
-  }
+  const { photos, wanted, have } = await prunePhotos();
   const missing = [...wanted].filter((url) => !have.has(url));
   await inParallel(missing.filter((url) => !url.includes('-large')), 4, (url) => savePhoto(photos, url));
   await inParallel(missing.filter((url) => url.includes('-large')), 1, (url) => savePhoto(photos, url));
 }
 
 // savePage saves one day's page, and with it the static files, unless it was saved within the
-// last hour.
+// last hour. Pages saved without the security headers (by the first versions) are saved again.
 async function savePage(pages, day) {
   const saved = await pages.match(pageURL(day));
-  if (saved && Date.now() - Number(saved.headers.get('x-saved')) < HOUR) return;
+  if (saved && Date.now() - Number(saved.headers.get('x-saved')) < HOUR && saved.headers.has('Content-Security-Policy')) return;
   const response = await fetch(pageURL(day), { cache: 'no-store' });
   // A redirect means the day has passed.
   if (!response.ok || response.redirected) return;
   const html = await response.text();
-  await pages.put(pageURL(day), new Response(html, {
-    headers: { 'Content-Type': 'text/html; charset=utf-8', 'x-saved': String(Date.now()) },
-  }));
+  const headers = pageHeaders(response.headers);
+  headers.set('x-saved', String(Date.now()));
+  await pages.put(pageURL(day), new Response(html, { headers }));
   await saveStatic(html);
 }
 
@@ -121,7 +115,7 @@ async function saveStatic(html) {
 }
 
 // removePages deletes the pages of days that have passed and, when keep isn't empty, of days
-// not in it. Their photos go on the next save.
+// not in it. Their photos go with prunePhotos.
 async function removePages(keep) {
   const now = today();
   const pages = await caches.open(PAGES);
@@ -129,6 +123,22 @@ async function removePages(keep) {
     const day = dayOf(request.url);
     if (day < now || (keep.length > 0 && !keep.includes(day))) await pages.delete(request);
   }
+}
+
+// prunePhotos deletes the photos no saved page shows any more. It returns the photo cache, the
+// photos the saved pages show, and those that were in the cache.
+async function prunePhotos() {
+  const pages = await caches.open(PAGES);
+  const wanted = new Set();
+  for (const request of await pages.keys()) {
+    for (const url of photosOn(await (await pages.match(request)).text())) wanted.add(url);
+  }
+  const photos = await caches.open(PHOTOS);
+  const have = new Set((await photos.keys()).map((r) => r.url));
+  for (const url of have) {
+    if (!wanted.has(url)) await photos.delete(url);
+  }
+  return { photos, wanted, have };
 }
 
 // inParallel runs work for every item, at most limit at a time.
@@ -145,7 +155,7 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
   if (e.request.mode === 'navigate' && url.pathname === '/') {
-    e.respondWith(page(e.request, url));
+    e.respondWith(page(e, url));
   } else if (url.pathname.startsWith('/photos/')) {
     e.respondWith(photo(e.request));
   } else if (url.pathname.startsWith('/static/')) {
@@ -171,12 +181,13 @@ async function photo(request) {
 // device says it is offline, the network isn't tried at all.
 const NETWORK_WAIT = 3000;
 
-async function page(request, url) {
-  const network = self.navigator.onLine === false ? Promise.reject(new Error('offline')) : fetch(request);
+async function page(e, url) {
+  const network = self.navigator.onLine === false ? Promise.reject(new Error('offline')) : fetch(e.request);
   const slow = new Promise((resolve) => setTimeout(resolve, NETWORK_WAIT, 'slow'));
   const first = await Promise.race([network.catch(() => null), slow]);
   if (first instanceof Response && first.status < 500) return first;
   await removePages([]);
+  e.waitUntil(prunePhotos()); // after answering, so the page isn't slowed down
   const days = await savedDays();
   const day = url.searchParams.get('day') || days[0];
   if (days.includes(day)) return savedPage(day);
@@ -194,7 +205,16 @@ async function page(request, url) {
 async function savedPage(day) {
   const saved = await (await caches.open(PAGES)).match(pageURL(day));
   const html = (await saved.text()).replace('<body ', `<body data-offline="${Number(saved.headers.get('x-saved'))}" `);
-  return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+  return new Response(html, { headers: pageHeaders(saved.headers) });
+}
+
+// pageHeaders is the content type plus the security headers copied from the given ones.
+function pageHeaders(from) {
+  const headers = new Headers({ 'Content-Type': 'text/html; charset=utf-8' });
+  for (const name of SECURITY_HEADERS) {
+    if (from.has(name)) headers.set(name, from.get(name));
+  }
+  return headers;
 }
 
 // savedDays lists the days with a saved page, in order.

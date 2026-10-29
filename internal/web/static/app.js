@@ -857,7 +857,8 @@
   //
   // While online, sw.js is told the next three days with menus and saves them (at most once an
   // hour). Offline, it shows a saved page instead, marked with data-offline: the time it was
-  // saved. Days that weren't saved are then left out of the picker.
+  // saved. Days that weren't saved are then left out of the picker. As soon as the device is
+  // back online, the notice goes and every day is there again.
 
   const dayOf = (link) => new URL(link.href).searchParams.get('day');
 
@@ -865,14 +866,22 @@
     const saved = Number(body.dataset.offline);
     if (!saved) return;
     const el = document.getElementById('offline');
+    const dayLinks = [...document.querySelectorAll('[data-day-link]')];
+    let online = false;
+    window.addEventListener('online', () => {
+      online = true;
+      el.hidden = true;
+      for (const link of dayLinks) link.hidden = false;
+    }, { once: true });
     el.hidden = false;
     setText(el, 'offline', new Intl.DateTimeFormat('de-CH', {
       timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
     }).format(saved).replace(',', ''));
     if (!('caches' in window)) return;
-    caches.open('mp-pages').then((pages) => pages.keys()).then((saved) => {
-      const days = saved.map((request) => new URL(request.url).searchParams.get('day'));
-      for (const link of document.querySelectorAll('[data-day-link]')) link.hidden = !days.includes(dayOf(link));
+    caches.open('mp-pages').then((pages) => pages.keys()).then((keys) => {
+      if (online) return;
+      const days = keys.map((request) => new URL(request.url).searchParams.get('day'));
+      for (const link of dayLinks) link.hidden = !days.includes(dayOf(link));
     }, () => {});
   }
 
