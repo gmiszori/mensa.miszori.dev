@@ -136,7 +136,10 @@
 
   // Today's date in Zurich as "YYYY-MM-DD", like the server's dates.
   function zurichDate() {
-    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Zurich' }).format(new Date());
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en', {
+      timeZone: 'Europe/Zurich', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(new Date()).map((p) => [p.type, p.value]));
+    return `${parts.year}-${parts.month}-${parts.day}`;
   }
 
   // hours looks like "11:15-14:00 17:30-19:30".
@@ -867,9 +870,10 @@
       timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
     }).format(saved).replace(',', ''));
     if (!('caches' in window)) return;
-    for (const link of document.querySelectorAll('[data-day-link]')) {
-      caches.has(`mp-day-${dayOf(link)}`).then((has) => { link.hidden = !has; }, () => {});
-    }
+    caches.open('mp-pages').then((pages) => pages.keys()).then((saved) => {
+      const days = saved.map((request) => new URL(request.url).searchParams.get('day'));
+      for (const link of document.querySelectorAll('[data-day-link]')) link.hidden = !days.includes(dayOf(link));
+    }, () => {});
   }
 
   function keepOffline() {
