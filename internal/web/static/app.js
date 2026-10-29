@@ -8,7 +8,8 @@
 //   2. filters instantly (search, lunch/dinner, and the diet, campus, allergen and "open now"
 //      settings) by hiding elements,
 //   3. opens one dish at a time, animated, centred on screen, with its photo large,
-//   4. applies settings the moment they change and saves them.
+//   4. applies settings the moment they change and saves them,
+//   5. lets sw.js keep the next three days with menus for use offline.
 (() => {
   'use strict';
 
@@ -17,7 +18,9 @@
   const allTexts = JSON.parse(body.dataset.texts || '{}'); // {en: {...}, de: {...}}
   const grid = document.getElementById('canteens');
   const cards = [...document.querySelectorAll('.canteen')];
-  const isToday = body.dataset.today === 'true';
+  // Decided here rather than by the server, because a page saved for offline use (sw.js) may
+  // be shown on a later day.
+  const isToday = body.dataset.date === zurichDate();
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   // ---------- the settings, kept in this browser only ----------
@@ -73,9 +76,19 @@
   // ---------- filtering ----------
 
   const state = {
-    meal: body.dataset.meal, // "lunch" or "dinner"
+    meal: firstMeal(), // "lunch" or "dinner"
     query: '',
   };
+
+  // The meal in the link (the picker keeps it when switching days), otherwise lunch, except
+  // after 15:00 today, when dinner is what people are looking for. The server decides the same
+  // way; this is for saved pages, which keep the meal of when they were saved.
+  function firstMeal() {
+    const asked = new URLSearchParams(location.search).get('meal');
+    if (asked === 'lunch' || asked === 'dinner') return asked;
+    const hasDinner = document.querySelector('.dishes[data-meal="dinner"] .dish') !== null;
+    return isToday && hasDinner && zurichClock() >= '15:00' ? 'dinner' : 'lunch';
+  }
 
   // Lowercase and without accents, so "creme" finds "Crème".
   const fold = (s) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
@@ -119,6 +132,11 @@
     return new Intl.DateTimeFormat('en-GB', {
       timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
     }).format(new Date());
+  }
+
+  // Today's date in Zurich as "YYYY-MM-DD", like the server's dates.
+  function zurichDate() {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Zurich' }).format(new Date());
   }
 
   // hours looks like "11:15-14:00 17:30-19:30".
@@ -224,6 +242,7 @@
       const label = card.querySelector('[data-status]');
       if (!label) continue;
       const closes = closingTime(card.dataset.hours);
+      label.hidden = false;
       label.className = `status ${closes ? 'open' : 'closed'}`;
       setText(label, closes ? 'open' : 'closed');
       if (closes) label.append(` · ${timeLeft(closes)}`);
@@ -608,9 +627,13 @@
     }
   }
 
+  function showMealLabel() {
+    for (const label of document.querySelectorAll('[data-meal-label]')) label.hidden = label.dataset.mealLabel !== state.meal;
+  }
+
   function setMeal(meal) {
     state.meal = meal;
-    for (const label of document.querySelectorAll('[data-meal-label]')) label.hidden = label.dataset.mealLabel !== meal;
+    showMealLabel();
     // Switching day keeps the meal.
     for (const link of document.querySelectorAll('[data-day-link]')) {
       const url = new URL(link.href);
@@ -827,6 +850,37 @@
     if (img.complete && img.naturalWidth === 0) dropPhoto(img);
   }
 
+  // ---------- offline ----------
+  //
+  // While online, sw.js is told the next three days with menus and saves them (at most once an
+  // hour). Offline, it shows a saved page instead, marked with data-offline: the time it was
+  // saved. Days that weren't saved are then left out of the picker.
+
+  const dayOf = (link) => new URL(link.href).searchParams.get('day');
+
+  function showOffline() {
+    const saved = Number(body.dataset.offline);
+    if (!saved) return;
+    const el = document.getElementById('offline');
+    el.hidden = false;
+    setText(el, 'offline', new Intl.DateTimeFormat('de-CH', {
+      timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    }).format(saved).replace(',', ''));
+    if (!('caches' in window)) return;
+    for (const link of document.querySelectorAll('[data-day-link]')) {
+      caches.has(`mp-day-${dayOf(link)}`).then((has) => { link.hidden = !has; }, () => {});
+    }
+  }
+
+  function keepOffline() {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('/sw.js').catch(() => { /* no offline copies, nothing else changes */ });
+    if (body.dataset.offline) return;
+    const today = zurichDate();
+    const days = [...document.querySelectorAll('[data-day-link]')].map(dayOf).filter((day) => day >= today).slice(0, 3);
+    navigator.serviceWorker.ready.then((registration) => registration.active?.postMessage({ save: days }));
+  }
+
   // ---------- start ----------
   //
   // Apply the saved settings while the placeholder cards are showing, then swap them for the
@@ -835,6 +889,8 @@
   showLanguage();
   showPrices();
   showSettingsSheet();
+  showMealLabel();
+  showOffline();
   for (const card of cards) {
     card.querySelector('[data-favourite]').setAttribute('aria-pressed', String(settings.fav.includes(card.dataset.id)));
   }
@@ -853,4 +909,5 @@
   placeCards(); // again, now that the cards can be measured
   setInterval(refreshStatus, 60 * 1000);
   if (settings.near === true) locate();
+  keepOffline();
 })();

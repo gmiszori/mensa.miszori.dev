@@ -57,6 +57,12 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /favicon.ico", cacheStatic(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFileFS(w, r, static, "favicon.ico")
 	})))
+	// The service worker (offline copies of the menus) must come from the root to act on
+	// every page. Browsers check it for a new version on each visit.
+	mux.HandleFunc("GET /sw.js", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache")
+		http.ServeFileFS(w, r, static, "sw.js")
+	})
 	mux.Handle("GET /photos/{file}", s.Photos)
 	mux.HandleFunc("GET /healthz", s.health)
 	return securityHeaders(mux)
@@ -235,7 +241,8 @@ func (s *Server) buildPage(lang, requested, meal string, now time.Time) pageData
 	}
 
 	// The meal asked for (the picker keeps it when switching days); otherwise lunch, except
-	// after 15:00 today, when dinner is what people are looking for.
+	// after 15:00 today, when dinner is what people are looking for. app.js decides the same
+	// way for pages saved for offline use.
 	switch {
 	case meal == "lunch" || meal == "dinner":
 		p.Meal = meal
