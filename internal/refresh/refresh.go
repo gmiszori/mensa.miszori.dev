@@ -1,5 +1,6 @@
 // Package refresh keeps the menu store up to date: it asks every source for the current and
-// next week, on start and then at a fixed interval.
+// next weeks on start, on every full hour, and whenever a canteen opens for lunch or dinner
+// (canteens upload photos and last changes around then).
 //
 // A source that fails leaves the menus it delivered earlier untouched, so a website being
 // down for a while only means slightly older data, never an empty app. A source that answers
@@ -33,18 +34,40 @@ type Refresher struct {
 	Log      *slog.Logger
 }
 
-// Run refreshes once, then again every interval, until ctx is cancelled.
-func (r *Refresher) Run(ctx context.Context, interval time.Duration) {
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
+// Run refreshes once, then on every full hour and at every opening time in today's menus,
+// until ctx is cancelled.
+func (r *Refresher) Run(ctx context.Context) {
 	for {
 		r.Once(ctx)
+		timer := time.NewTimer(time.Until(r.next(time.Now())))
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return
-		case <-ticker.C:
+		case <-timer.C:
 		}
 	}
+}
+
+// next is when the refresh after now is due: the next full hour, or the first time a canteen
+// opens before that. A canteen that opened while the last refresh was running waits for the
+// next one.
+func (r *Refresher) next(now time.Time) time.Time {
+	now = now.In(r.Zone)
+	next := now.Truncate(time.Hour).Add(time.Hour) // Zurich's offsets are whole hours
+	today := now.Format(time.DateOnly)
+	for _, day := range r.Store.On(today) {
+		for _, meal := range []menu.Meal{day.Lunch, day.Dinner} {
+			if meal.From == "" || len(meal.Dishes) == 0 {
+				continue
+			}
+			opens, err := time.ParseInLocation(time.DateOnly+" 15:04", today+" "+meal.From, r.Zone)
+			if err == nil && opens.After(now) && opens.Before(next) {
+				next = opens
+			}
+		}
+	}
+	return next
 }
 
 // weeks is how many weeks are fetched, starting with the current one. Menus are usually

@@ -5,7 +5,7 @@
 //	catalog   which canteens exist and where their menus come from (canteens.json)
 //	eth       reads menus from ETH's menu API
 //	food2050  reads menus from app.food2050.ch (UZH and other ZFV canteens)
-//	refresh   asks both sources for new menus every few hours
+//	refresh   asks both sources for new menus every hour and when canteens open
 //	menu      the menu data model and the store that keeps it (saved as data/menus.json)
 //	photos    shrinks and caches dish photos
 //	web       the website itself
@@ -14,7 +14,6 @@
 //
 //	ADDR          where to listen (default ":8080")
 //	DATA_DIR      where menus and photo thumbnails are kept (default "./data")
-//	REFRESH_EVERY how often menus are re-fetched (default "1h")
 //	DOMAIN        the public domain, e.g. "mensa.miszori.dev", for absolute links in link
 //	              previews (default: the address of each request)
 //
@@ -64,11 +63,6 @@ func main() {
 func run(log *slog.Logger) error {
 	addr := env("ADDR", ":8080")
 	dataDir := env("DATA_DIR", "./data")
-	every, err := time.ParseDuration(env("REFRESH_EVERY", "1h"))
-	if err != nil {
-		return err
-	}
-
 	zurich, err := time.LoadLocation("Europe/Zurich")
 	if err != nil {
 		return err
@@ -102,15 +96,15 @@ func run(log *slog.Logger) error {
 	}
 	refreshDone := make(chan struct{})
 	go func() {
-		refresher.Run(ctx, every)
+		refresher.Run(ctx)
 		close(refreshDone)
 	}()
 
 	site := &web.Server{
 		Catalog: cat, Store: store, Zone: zurich, Log: log, Photos: photoHandler,
 		Domain: os.Getenv("DOMAIN"),
-		// Menus count as stale after three missed refreshes, but not before 6 hours.
-		StaleAfter: max(6*time.Hour, 3*every),
+		// Menus count as stale after six missed hourly refreshes.
+		StaleAfter: 6 * time.Hour,
 	}
 	server := &http.Server{
 		Addr: addr, Handler: site.Handler(),

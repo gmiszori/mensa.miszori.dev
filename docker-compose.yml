@@ -18,7 +18,6 @@ services:
   mensaplan:
     build: .
     environment:
-      REFRESH_EVERY: ${REFRESH_EVERY:-1h}
       DOMAIN: ${DOMAIN:-localhost} # for absolute links in link previews
     volumes:
       - data:/data

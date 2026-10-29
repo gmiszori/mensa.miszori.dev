@@ -44,9 +44,9 @@ Open http://localhost:8080. The first start fetches all menus, which takes about
 UZH prices take a few minutes the very first time and are cached after that. Menus are saved in
 `./data`, so later starts show the last known menus right away.
 
-The program reads four optional environment variables: `ADDR` (default `:8080`), `DATA_DIR`
-(default `./data`), `REFRESH_EVERY` (default `1h`) and `DOMAIN`, the public domain used for
-absolute links in link previews (default: the address of each request).
+The program reads three optional environment variables: `ADDR` (default `:8080`), `DATA_DIR`
+(default `./data`) and `DOMAIN`, the public domain used for absolute links in link previews
+(default: the address of each request).
 
 Run the tests with:
 
@@ -57,16 +57,17 @@ go test ./...
 ## How it works
 
 ```
-                                                      every hour
+                                          hourly and when canteens open
 Browser ─► proxy ─► Caddy (HTTPS) ─► Mensaplan Zürich ◄──────────── ETH menu API
                                      (Go, one binary) ◄──────────── app.food2050.ch (UZH and other ZFV canteens)
                                             │
                                             └─ data/menus.json, data/photos/
 ```
 
-1. **Fetching.** On start and every hour, the program asks both sources for the current week and
-   the two following ones. ETH has a JSON API. FOOD2050 has no API, so the program reads the data
-   its pages embed for the browser. If a source is down, the menus it delivered earlier stay.
+1. **Fetching.** On start, on every full hour and whenever a canteen opens for lunch or dinner,
+   the program asks both sources for the current week and the two following ones. ETH has a
+   JSON API. FOOD2050 has no API, so the program reads the data its pages embed for the
+   browser. If a source is down, the menus it delivered earlier stay.
 2. **Storing.** Menus live in memory and are saved to `data/menus.json` after every refresh. A
    few weeks of menus for ~35 canteens is well under a megabyte, so there is no database.
 3. **Showing.** Every page request renders the HTML from the stored menus, the same for every
@@ -135,7 +136,6 @@ with a local certificate.
 | Variable | Default | |
 |----------|---------|--|
 | `DOMAIN` | `localhost` | The domain Caddy serves and gets the certificate for. Must match `MENSA_DOMAIN` in the proxy. |
-| `REFRESH_EVERY` | `1h` | How often menus are fetched again. |
 
 ## Security
 
