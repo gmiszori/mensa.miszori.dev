@@ -76,7 +76,7 @@ func (c *Client) Week(ctx context.Context, pageURL string, day time.Time) (map[s
 	return result, nil
 }
 
-// Detail returns the prices and photo URL on a dish's detail page.
+// Detail returns the prices, photo URL and nutrition values on a dish's detail page.
 func (c *Client) Detail(ctx context.Context, detailURL string) (menu.Detail, error) {
 	data, err := c.fetch(ctx, detailURL)
 	if err != nil {
@@ -90,6 +90,7 @@ func (c *Client) Detail(ctx context.Context, detailURL string) (menu.Detail, err
 		d := menu.Detail{Prices: prices(it)}
 		if it.Dish != nil {
 			d.Photo = it.Dish.ImageURL
+			d.Nutrition = it.Dish.Stats.nutrition()
 		}
 		if d != (menu.Detail{}) {
 			return d, nil
@@ -148,11 +149,70 @@ type dish struct {
 	IsVegan      bool   `json:"isVegan"`
 	IsVegetarian bool   `json:"isVegetarian"`
 	ImageURL     string `json:"imageUrl"` // only on detail pages, and only once a photo was uploaded
+	Stats        *stats `json:"stats"`    // only on detail pages
 	Allergens    []struct {
 		Allergen struct {
 			ExternalID string `json:"externalId"` // "cerealsContainingGluten", "soybeans", ...
 		} `json:"allergen"`
 	} `json:"allergens"`
+}
+
+// stats holds a dish's nutrition values, each per 100 g and for the whole portion.
+type stats struct {
+	ServingWeight *struct {
+		Amount float64 `json:"amount"`
+		Unit   string  `json:"unit"` // "g"
+	} `json:"servingWeight"`
+	Energy        *amount `json:"energy"`
+	Fat           *amount `json:"fat"`
+	SaturatedFat  *amount `json:"saturatedFat"`
+	Carbohydrates *amount `json:"carbohydrates"`
+	Sugar         *amount `json:"sugar"`
+	Fibers        *amount `json:"fibers"`
+	Protein       *amount `json:"protein"`
+	Salt          *amount `json:"salt"`
+}
+
+type amount struct {
+	Per100g float64 `json:"amountPer100g"`
+	Total   float64 `json:"amount"` // in the whole portion
+	Unit    string  `json:"unit"`   // "kcal" for energy, "g" for the rest
+}
+
+// nutrition returns the dish's nutrition values, or nil if the page has none.
+func (s *stats) nutrition() *menu.Nutrition {
+	if s == nil || s.Energy == nil || s.Energy.Per100g <= 0 {
+		return nil
+	}
+	n := &menu.Nutrition{Per100g: menu.Nutrients{}}
+	if s.ServingWeight != nil && s.ServingWeight.Unit == "g" && s.ServingWeight.Amount > 0 {
+		n.PortionGrams = s.ServingWeight.Amount
+		n.Portion = menu.Nutrients{}
+	}
+	for key, a := range map[string]*amount{"energy": s.Energy, "fat": s.Fat, "saturates": s.SaturatedFat,
+		"carbohydrates": s.Carbohydrates, "sugars": s.Sugar, "fibre": s.Fibers, "protein": s.Protein, "salt": s.Salt} {
+		if a == nil {
+			continue
+		}
+		scale := 1.0 // to kcal for energy, to grams for the rest
+		switch strings.ToLower(a.Unit) {
+		case "kcal", "g", "":
+		case "kj":
+			scale = 1 / menu.KJPerKcal
+		case "mg":
+			scale = 0.001
+		default:
+			continue
+		}
+		if a.Per100g < 0 || a.Total < 0 {
+			continue
+		}
+		n.Per100g[key] = a.Per100g * scale
+		if n.Portion != nil {
+			n.Portion[key] = a.Total * scale
+		}
+	}
+	return n
 }
 
 func (d *dish) toDish() (menu.Dish, bool) {

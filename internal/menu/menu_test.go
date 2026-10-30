@@ -1,6 +1,7 @@
 package menu
 
 import (
+	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -95,5 +96,40 @@ func TestPruneForgetsOldPhotos(t *testing.T) {
 	}
 	if _, ok := s.PhotoURL(PhotoKey("https://example.com/new.jpg")); !ok {
 		t.Error("photo of a current dish is unknown")
+	}
+}
+
+// Files written by older code still open, brought up to date by the migrations.
+func TestOpenOldFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "menus.json")
+	old := `{"days":{"2026-10-26":{"a":{"lunch":{"dishes":[{"name":{"en":"Soup","de":"Suppe"},"prices":{"student":5}}]}}}},
+		"details":{"https://example.com/dish":{"prices":{"student":9}}}}`
+	if err := os.WriteFile(path, []byte(old), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	s, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.data.Version != storeVersion {
+		t.Errorf("version %d, want %d", s.data.Version, storeVersion)
+	}
+	if _, ok := s.CachedDetail("https://example.com/dish"); ok {
+		t.Error("detail pages cached without nutrition should be read again")
+	}
+	if got := s.data.Days["2026-10-26"]["a"].Lunch.Dishes; len(got) != 1 || got[0].Name.EN != "Soup" {
+		t.Errorf("menus lost: %+v", got)
+	}
+
+	// A file from newer code (after a rollback) opens as it is.
+	newer := `{"version":99,"days":{},"details":{"https://example.com/dish":{"prices":{"student":9}}},"future":true}`
+	if err := os.WriteFile(path, []byte(newer), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if s, err = Open(path); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := s.CachedDetail("https://example.com/dish"); !ok {
+		t.Error("a newer file lost its cached details")
 	}
 }

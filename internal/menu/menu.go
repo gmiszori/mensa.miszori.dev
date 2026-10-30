@@ -25,14 +25,33 @@ type Meal struct {
 
 // Dish is one item on a menu.
 type Dish struct {
-	Name        Text     `json:"name"`
-	Description Text     `json:"description"`
-	Diet        string   `json:"diet,omitempty"`      // vegan, vegetarian, meat, fish, or "" when unknown
-	Allergens   []string `json:"allergens,omitempty"` // ids from the Allergens list
-	Prices      Prices   `json:"prices"`
-	Per100g     bool     `json:"per100g,omitempty"` // buffets are sold by weight
-	Photo       string   `json:"photo,omitempty"`   // URL of the full-size photo at the source, "" if none
+	Name        Text       `json:"name"`
+	Description Text       `json:"description"`
+	Diet        string     `json:"diet,omitempty"`      // vegan, vegetarian, meat, fish, or "" when unknown
+	Allergens   []string   `json:"allergens,omitempty"` // ids from the Allergens list
+	Prices      Prices     `json:"prices"`
+	Per100g     bool       `json:"per100g,omitempty"`   // buffets are sold by weight
+	Photo       string     `json:"photo,omitempty"`     // URL of the full-size photo at the source, "" if none
+	Nutrition   *Nutrition `json:"nutrition,omitempty"` // nil if the source published none
 }
+
+// Nutrition is what a dish contains per 100 g and, when the source knows the portion's
+// weight, in the whole portion.
+type Nutrition struct {
+	Per100g      Nutrients `json:"per100g"`
+	PortionGrams float64   `json:"portionGrams,omitempty"`
+	Portion      Nutrients `json:"portion,omitempty"`
+}
+
+// Nutrients maps a nutrient (one of NutrientKeys) to its amount: energy in kcal, the others
+// in grams. Nutrients the source didn't publish are missing.
+type Nutrients map[string]float64
+
+// KJPerKcal converts between the two units of energy.
+const KJPerKcal = 4.184
+
+// NutrientKeys are the nutrients in the order of a Swiss food label.
+var NutrientKeys = []string{"energy", "fat", "saturates", "carbohydrates", "sugars", "fibre", "protein", "salt"}
 
 // Text is a string in English and German. Sources that only publish one language fill both.
 type Text struct {

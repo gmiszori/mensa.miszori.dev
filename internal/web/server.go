@@ -11,9 +11,11 @@ import (
 	"html/template"
 	"io/fs"
 	"log/slog"
+	"math"
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -37,6 +39,8 @@ type Server struct {
 	// Domain is the public domain (e.g. "mensa.miszori.dev") for absolute links in link
 	// previews. Empty or "localhost": the address of the request is used.
 	Domain string
+	// Release is the version from the VERSION file, e.g. "1.0.0", shown by /healthz.
+	Release string
 
 	page    *template.Template
 	version string // changes whenever a static file changes; see staticVersion
@@ -115,7 +119,7 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) {
 			stale = append(stale, source)
 		}
 	}
-	writeJSON(w, map[string]any{"status": "ok", "stale": stale, "updated": updated, "days": s.Store.Dates()})
+	writeJSON(w, map[string]any{"status": "ok", "version": s.Release, "stale": stale, "updated": updated, "days": s.Store.Dates()})
 }
 
 // ---- building the page ----
@@ -178,6 +182,9 @@ type dishView struct {
 	Prices                       menu.Prices
 	Photo                        string
 	Order                        int // position on the source's menu
+	// Nutrition values for app.js, see nutrients; "" when the source published none.
+	Nutrition, Portion string
+	PortionGrams       string
 }
 
 // buildPage decides which day and meal to show and turns the store's data into pageData.
@@ -310,6 +317,12 @@ func (s *Server) canteenView(c catalog.Canteen, day menu.Day) canteenView {
 				Photo:       photoKey(d.Photo),
 				Order:       i,
 			}
+			if n := d.Nutrition; n != nil {
+				dv.Nutrition = nutrients(n.Per100g)
+				if n.Portion != nil {
+					dv.Portion, dv.PortionGrams = nutrients(n.Portion), strconv.FormatFloat(math.Round(n.PortionGrams), 'f', -1, 64)
+				}
+			}
 			out.Dishes = append(out.Dishes, dv)
 		}
 		return out
@@ -400,4 +413,26 @@ func securityHeaders(h http.Handler) http.Handler {
 		w.Header().Set("Permissions-Policy", "geolocation=(self), camera=(), microphone=()") // location: sorting by distance
 		h.ServeHTTP(w, r)
 	})
+}
+
+// nutrients writes nutrition values as app.js reads them: the amounts in the order of
+// menu.NutrientKeys, separated by spaces, with "-" for one the source didn't publish. Energy is
+// in whole kcal, salt in grams with two decimals, the rest in grams with one.
+func nutrients(n menu.Nutrients) string {
+	parts := make([]string, len(menu.NutrientKeys))
+	for i, key := range menu.NutrientKeys {
+		v, ok := n[key]
+		decimals := 1
+		switch key {
+		case "energy":
+			decimals = 0
+		case "salt":
+			decimals = 2
+		}
+		parts[i] = "-"
+		if ok {
+			parts[i] = strconv.FormatFloat(v, 'f', decimals, 64)
+		}
+	}
+	return strings.Join(parts, " ")
 }

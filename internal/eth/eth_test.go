@@ -2,6 +2,7 @@ package eth
 
 import (
 	"context"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -39,6 +40,10 @@ func TestMenus(t *testing.T) {
 	if first.Prices.Student <= 0 || first.Prices.External <= first.Prices.Student {
 		t.Errorf("prices: %+v", first.Prices)
 	}
+	// 538 kJ per 100 g, without a portion weight.
+	if n := first.Nutrition; n == nil || math.Round(n.Per100g["energy"]) != 129 || n.Per100g["salt"] != 0.99 || n.Portion != nil {
+		t.Errorf("nutrition: %+v", n)
+	}
 	if len(day.Dinner.Dishes) != 4 {
 		t.Errorf("got %d dinner dishes, want 4", len(day.Dinner.Dishes))
 	}
@@ -74,5 +79,12 @@ func TestUncut(t *testing.T) {
 		if en != c.wantEN || de != c.wantDE {
 			t.Errorf("uncut(%q, %q) = %q, %q; want %q, %q", c.en, c.de, en, de, c.wantEN, c.wantDE)
 		}
+	}
+}
+
+func TestPlaceholderNutrition(t *testing.T) {
+	m := meal{Energy: "105", Fat: "0", Saturates: "0", Carbohydrates: "0", Sugar: "0", Protein: "0", Salt: "0"}
+	if n := m.nutrition(); n != nil {
+		t.Errorf("energy without fat, carbohydrates or protein: got %+v, want nil", n)
 	}
 }

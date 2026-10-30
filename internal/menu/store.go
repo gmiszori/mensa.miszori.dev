@@ -25,6 +25,9 @@ type Store struct {
 
 // storeData is everything that gets written to the JSON file.
 type storeData struct {
+	// Version is the file's format, storeVersion when this code wrote it. Files written by
+	// older code are brought up to date by migrations when they are opened.
+	Version int `json:"version"`
 	// Days maps date -> canteen id -> what that canteen serves that day.
 	Days map[string]map[string]Day `json:"days"`
 	// Updated records when each source last refreshed successfully, for /healthz.
@@ -34,10 +37,23 @@ type storeData struct {
 	Details map[string]Detail `json:"details"`
 }
 
-// Detail is what a FOOD2050 dish detail page adds to the weekly menu: prices and a photo.
+// Detail is what a FOOD2050 dish detail page adds to the weekly menu: prices, a photo and
+// nutrition values.
 type Detail struct {
-	Prices Prices `json:"prices"`
-	Photo  string `json:"photo,omitempty"`
+	Prices    Prices     `json:"prices"`
+	Photo     string     `json:"photo,omitempty"`
+	Nutrition *Nutrition `json:"nutrition,omitempty"`
+}
+
+// storeVersion is the format this code writes. To change the format, add a step to
+// migrations and raise storeVersion, so files written by older code still open.
+const storeVersion = 1
+
+// migrations[v] turns a file of version v into version v+1.
+var migrations = []func(*storeData){
+	// 0 -> 1: cached detail pages were read without their nutrition values. Forgetting them
+	// makes the next refresh read every page again.
+	func(d *storeData) { d.Details = nil },
 }
 
 // Open loads the store from path. A missing file is fine: the store starts empty.
@@ -49,6 +65,7 @@ func Open(path string) (*Store, error) {
 	}, photos: map[string]string{}}
 	raw, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
+		s.data.Version = storeVersion
 		return s, nil
 	}
 	if err != nil {
@@ -56,6 +73,10 @@ func Open(path string) (*Store, error) {
 	}
 	if err := json.Unmarshal(raw, &s.data); err != nil {
 		return nil, err
+	}
+	// A file from newer code (after a rollback) is used as it is: unknown fields are ignored.
+	for ; s.data.Version < storeVersion; s.data.Version++ {
+		migrations[s.data.Version](&s.data)
 	}
 	// Files written by older versions may lack a map.
 	if s.data.Days == nil {

@@ -216,7 +216,20 @@ details.expanded .dish-row.has-photo { grid-template-columns: 1fr auto; }
 .dish-detail { padding: 0 0 12px; font-size: 0.85rem; color: var(--text-muted); display: grid; gap: 6px; }
 .dish-detail dt { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); }
 .dish-detail .prices { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-.dish-detail .actions { display: flex; gap: 8px; }
+/* Nutrition on the left, the star on the right. */
+.dish-detail .actions { display: flex; gap: 8px; justify-content: space-between; align-items: center; }
+.no-nutrition { font-size: 0.8rem; color: var(--text-sub); }
+[data-nutrition-toggle][aria-expanded='true'] { background: var(--text); color: var(--bg); border-color: var(--text); }
+.dish-detail [data-star] { margin-left: auto; }
+.nutrition-wrap { overflow: hidden; }
+/* "Always show nutrition" hides the button (app.js shows the table). Dishes without values keep the note. */
+.always-nutrition [data-nutrition-toggle] { display: none; }
+.nutrition { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.nutrition th, .nutrition td { padding: 5px 0 5px 8px; border-top: 1px solid var(--line); text-align: right; vertical-align: top; font-weight: 400; }
+.nutrition thead th, .nutrition thead td { border-top: 0; font-weight: 600; color: var(--text-sub); white-space: nowrap; }
+.nutrition tbody th { padding-left: 0; text-align: left; color: var(--text); }
+.nutrition tbody .sub th { padding-left: 12px; color: var(--text-sub); }
+.nutrition td { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text); }
 [data-star][aria-pressed='true'] .star-off, [data-star]:not([aria-pressed='true']) .star-on { display: none; }
 
 .no-menu summary { cursor: pointer; color: var(--text-sub); font-size: 0.9rem; padding: 0 0 16px; }

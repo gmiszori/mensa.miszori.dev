@@ -17,12 +17,16 @@
 //	DOMAIN        the public domain, e.g. "mensa.miszori.dev", for absolute links in link
 //	              previews (default: the address of each request)
 //
+// The release version is in the file VERSION (e.g. "1.0.0"), embedded at build time; each
+// release is tagged with it on GitHub (v1.0.0). It is logged at start and shown by /healthz.
+//
 // "mensaplan healthcheck" asks a running instance whether it is up and prints its status,
 // including sources whose menus are stale (used by Docker, whose minimal image has no curl).
 package main
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -44,6 +48,9 @@ import (
 	"mensaplan/internal/refresh"
 	"mensaplan/internal/web"
 )
+
+//go:embed VERSION
+var version string
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
@@ -102,7 +109,7 @@ func run(log *slog.Logger) error {
 
 	site := &web.Server{
 		Catalog: cat, Store: store, Zone: zurich, Log: log, Photos: photoHandler,
-		Domain: os.Getenv("DOMAIN"),
+		Domain: os.Getenv("DOMAIN"), Release: strings.TrimSpace(version),
 		// Menus count as stale after six missed hourly refreshes.
 		StaleAfter: 6 * time.Hour,
 	}
@@ -127,7 +134,7 @@ func run(log *slog.Logger) error {
 		close(shutdownDone)
 	}()
 
-	log.Info("Mensaplan Zürich listening", "addr", addr, "data", dataDir)
+	log.Info("Mensaplan Zürich listening", "version", strings.TrimSpace(version), "addr", addr, "data", dataDir)
 	if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}

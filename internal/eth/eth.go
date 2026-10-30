@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -114,6 +115,36 @@ type meal struct {
 	} `json:"allergen-array"`
 	MeatTypes []json.RawMessage `json:"meat-type-array"`
 	ImageURL  string            `json:"image-url"`
+	// Nutrition values per 100 g, as decimal strings, "" when not published. Energy is in kJ.
+	Energy        string `json:"energy"`
+	Fat           string `json:"fat"`
+	Saturates     string `json:"saturated-fatty-acids"`
+	Carbohydrates string `json:"carbohydrates"`
+	Sugar         string `json:"sugar"`
+	Protein       string `json:"protein"`
+	Salt          string `json:"salt"`
+}
+
+// nutrition returns the meal's nutrition values, or nil if it has none. ETH publishes them
+// per 100 g only, without the portion's weight.
+func (m *meal) nutrition() *menu.Nutrition {
+	kJ, err := strconv.ParseFloat(m.Energy, 64)
+	if err != nil || kJ <= 0 {
+		return nil
+	}
+	per100g := menu.Nutrients{"energy": kJ / menu.KJPerKcal}
+	for key, s := range map[string]string{"fat": m.Fat, "saturates": m.Saturates, "carbohydrates": m.Carbohydrates,
+		"sugars": m.Sugar, "protein": m.Protein, "salt": m.Salt} {
+		if v, err := strconv.ParseFloat(s, 64); err == nil && v >= 0 {
+			per100g[key] = v
+		}
+	}
+	// Energy comes from fat, carbohydrates and protein, so energy without any of them is a
+	// placeholder, not a measurement.
+	if per100g["fat"]+per100g["carbohydrates"]+per100g["protein"] == 0 {
+		return nil
+	}
+	return &menu.Nutrition{Per100g: per100g}
 }
 
 // rotas downloads every page of rotas valid after the given date, in one language.
@@ -321,6 +352,7 @@ func toDish(en, de *meal, untranslated map[string]bool) (menu.Dish, bool) {
 		Allergens:   menu.AllergenSet(allergenNames),
 		Per100g:     strings.Contains(en.Unit, "100"),
 		Photo:       photoURL(en.ImageURL),
+		Nutrition:   en.nutrition(),
 	}
 	dish.Diet = diet(en, dish.Allergens)
 	for _, p := range en.Prices {

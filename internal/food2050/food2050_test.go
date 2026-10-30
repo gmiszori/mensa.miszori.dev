@@ -2,11 +2,14 @@ package food2050
 
 import (
 	"context"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"mensaplan/internal/menu"
 )
 
 // The testdata files are real pages of the Untere Mensa (UZH) for the week of 2026-10-26.
@@ -60,6 +63,18 @@ func TestWeekAndPrices(t *testing.T) {
 	}
 	if detail.Photo != "" {
 		t.Errorf("unexpected photo %q", detail.Photo)
+	}
+	if n := detail.Nutrition; n == nil {
+		t.Error("nutrition missing")
+	} else {
+		if n.PortionGrams != 487 || math.Round(n.Portion["energy"]) != 737 || math.Round(n.Per100g["energy"]) != 151 {
+			t.Errorf("energy: %v kcal per 100 g, %v kcal in %v g", n.Per100g["energy"], n.Portion["energy"], n.PortionGrams)
+		}
+		for _, key := range menu.NutrientKeys {
+			if _, ok := n.Per100g[key]; !ok {
+				t.Errorf("%s missing", key)
+			}
+		}
 	}
 
 	// The same kind of page on the day itself, after the canteen uploaded a photo.

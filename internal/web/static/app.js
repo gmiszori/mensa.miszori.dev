@@ -25,13 +25,33 @@
 
   // ---------- the settings, kept in this browser only ----------
 
+  // The settings carry their format's version, settings.v. A visitor's saved settings may be
+  // from any earlier version, so on load they are brought up to date one step at a time,
+  // never thrown away. To change the format: add a step to MIGRATIONS and raise
+  // SETTINGS_VERSION. boot.js reads lang and theme before this runs, so those two keep their
+  // meaning in every version.
+  const SETTINGS_VERSION = 1;
+  const MIGRATIONS = {
+    // 0, settings saved before they had a version: the same format as version 1, which added
+    // the nutrition setting (off unless set).
+    0: (s) => s,
+  };
+  // On/off settings, saved as true or false.
+  const SWITCHES = ['open', 'near', 'nutrition'];
+
   function readSettings() {
+    let parsed = {};
     try {
-      const parsed = JSON.parse(localStorage.getItem('mp') || '{}');
-      return parsed && typeof parsed === 'object' ? parsed : {};
-    } catch {
-      return {};
+      parsed = JSON.parse(localStorage.getItem('mp') || '{}');
+    } catch { /* storage unavailable or broken: defaults */ }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) parsed = {};
+    // Settings from a newer version (after a rollback) are kept as they are: this version
+    // uses what it knows and ignores the rest.
+    for (let v = Number.isInteger(parsed.v) ? parsed.v : 0; v < SETTINGS_VERSION; v++) {
+      parsed = MIGRATIONS[v](parsed);
+      parsed.v = v + 1;
     }
+    return parsed;
   }
 
   function saveSettings() {
@@ -535,6 +555,7 @@
       setExpanded(closing, false);
     }
     if (opening) {
+      if (alwaysNutrition()) addNutrition(opening);
       opening.open = true;
       setExpanded(opening, photoReady);
     }
@@ -615,6 +636,84 @@
     toggleDish(summary.parentElement);
   });
 
+  // ---------- nutrition ----------
+  //
+  // A dish carries its nutrition values as numbers (see nutrients in server.go); the table
+  // with its labels is in the page once, as a <template>, and is copied in when first shown.
+
+  const NUTRIENTS = ['energy', 'fat', 'saturates', 'carbohydrates', 'sugars', 'fibre', 'protein', 'salt'];
+  const KJ_PER_KCAL = 4.184;
+  const published = (v) => v !== undefined && v !== '-';
+  // Energy gets two lines, kcal over kJ, so two columns fit on a phone.
+  const amount = (key, v) => {
+    if (!published(v)) return ['–'];
+    return key === 'energy' ? [`${v} kcal`, `${Math.round(v * KJ_PER_KCAL)} kJ`] : [`${Number(v)} g`];
+  };
+  const fill = (cell, lines) => cell.replaceChildren(...lines.flatMap((line, i) => (i ? [document.createElement('br'), line] : [line])));
+
+  function nutritionTable(dish) {
+    const table = document.getElementById('nutrition-table').content.firstElementChild.cloneNode(true);
+    const per100g = dish.dataset.nutrition.split(' ');
+    const portion = dish.dataset.portion?.split(' ');
+    if (portion) table.querySelector('[data-grams]').textContent = `(${dish.dataset.portionG} g)`;
+    else for (const row of table.rows) row.lastElementChild.remove();
+    NUTRIENTS.forEach((key, i) => {
+      const row = table.querySelector(`[data-key="${key}"]`);
+      if (!published(per100g[i]) && !published(portion?.[i])) {
+        row.remove();
+        return;
+      }
+      fill(row.cells[1], amount(key, per100g[i]));
+      if (portion) fill(row.cells[2], amount(key, portion[i]));
+    });
+    const wrap = document.createElement('dd');
+    wrap.className = 'nutrition-wrap';
+    wrap.append(table);
+    return wrap;
+  }
+
+  // The dish's table, added after its buttons the first time it's needed. With "always show
+  // nutrition" on, it is shown right away and app.css hides the button.
+  const alwaysNutrition = () => settings.nutrition === true;
+  function addNutrition(details) {
+    const actions = details.querySelector('.actions');
+    const dish = details.closest('.dish');
+    let wrap = actions.nextElementSibling;
+    if (!dish.dataset.nutrition || wrap?.classList.contains('nutrition-wrap')) return wrap;
+    wrap = nutritionTable(dish);
+    wrap.hidden = !alwaysNutrition();
+    actions.after(wrap);
+    return wrap;
+  }
+
+  // Tables already added follow the setting; with it off, a table stays open only if its
+  // button was tapped.
+  function showNutritionSetting() {
+    root.classList.toggle('always-nutrition', alwaysNutrition());
+    const open = grid.querySelector('details[open]');
+    if (open && alwaysNutrition()) addNutrition(open);
+    for (const wrap of grid.querySelectorAll('.nutrition-wrap')) {
+      const button = wrap.previousElementSibling.querySelector('[data-nutrition-toggle]');
+      wrap.hidden = !alwaysNutrition() && button?.getAttribute('aria-expanded') !== 'true';
+    }
+  }
+  showNutritionSetting();
+
+  function toggleNutrition(button) {
+    const open = button.getAttribute('aria-expanded') !== 'true';
+    button.setAttribute('aria-expanded', String(open));
+    const wrap = addNutrition(button.closest('details'));
+    wrap.getAnimations().forEach((a) => a.cancel());
+    if (reduceMotion.matches) {
+      wrap.hidden = !open;
+      return;
+    }
+    wrap.hidden = false;
+    const frames = [{ height: '0px', opacity: 0 }, { height: `${wrap.scrollHeight}px`, opacity: 1 }];
+    const animation = wrap.animate(open ? frames : frames.reverse(), { duration: DURATION * 0.75, easing: 'ease-in-out' });
+    if (!open) animation.onfinish = () => { wrap.hidden = true; };
+  }
+
   // ---------- the day and meal picker ----------
 
   const whenButton = document.getElementById('when');
@@ -678,6 +777,11 @@
       if (on) settings.fav.push(id);
       saveSettings();
       flip(cards, placeCards, favourite.closest('.canteen'));
+      return;
+    }
+    const nutrition = e.target.closest('[data-nutrition-toggle]');
+    if (nutrition) {
+      toggleNutrition(nutrition);
       return;
     }
     const star = e.target.closest('[data-star]');
@@ -790,6 +894,7 @@
     theme: showTheme,
     lang: () => { showLanguage(); showBudget(); },
     near: locate,
+    nutrition: showNutritionSetting,
   };
 
   // Shows the saved settings in the sheet's buttons.
@@ -798,7 +903,7 @@
       const key = group.dataset.setting;
       if (key === 'star') continue;
       let value = settings[key];
-      if (key === 'open' || key === 'near') value = value === true ? '1' : '';
+      if (SWITCHES.includes(key)) value = value === true ? '1' : '';
       if (key === 'price' && !['staff', 'external'].includes(value)) value = 'student';
       if (key === 'diet' && !['vegetarian', 'vegan'].includes(value)) value = '';
       if (key === 'theme' && !['light', 'dark'].includes(value)) value = 'system';
@@ -828,9 +933,9 @@
         settings[key] = settings[key].filter((v) => v !== button.value);
         if (on) settings[key].push(button.value);
       } else {
-        // One value: price, diet, open now and sort by distance (on/off), language, theme.
+        // One value: price, diet, the on/off switches, language, theme.
         for (const b of group.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b === button));
-        settings[key] = key === 'open' || key === 'near' ? button.value === '1' : button.value;
+        settings[key] = SWITCHES.includes(key) ? button.value === '1' : button.value;
       }
       saveSettings();
       (applySetting[key] || apply)();

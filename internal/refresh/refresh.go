@@ -203,7 +203,7 @@ func (r *Refresher) addDetails(ctx context.Context, items map[string][]food2050.
 			}
 			cached, ok := r.Store.CachedDetail(it.DetailURL)
 			if ok && (cached.Photo != "" || (date != today && date != tomorrow)) {
-				it.Dish.Prices, it.Dish.Photo = cached.Prices, cached.Photo
+				it.Dish.Prices, it.Dish.Photo, it.Dish.Nutrition = cached.Prices, cached.Photo, cached.Nutrition
 				continue
 			}
 			wg.Add(1)
@@ -214,10 +214,11 @@ func (r *Refresher) addDetails(ctx context.Context, items map[string][]food2050.
 				d, err := r.Food2050.Detail(ctx, it.DetailURL)
 				if err != nil {
 					r.Log.Debug("detail page failed", "url", it.DetailURL, "err", err)
-					it.Dish.Prices = cached.Prices // keep what we knew, if anything
+					// keep what we knew, if anything
+					it.Dish.Prices, it.Dish.Photo, it.Dish.Nutrition = cached.Prices, cached.Photo, cached.Nutrition
 					return
 				}
-				it.Dish.Prices, it.Dish.Photo = d.Prices, d.Photo
+				it.Dish.Prices, it.Dish.Photo, it.Dish.Nutrition = d.Prices, d.Photo, d.Nutrition
 				r.Store.CacheDetail(it.DetailURL, d)
 			}()
 		}
