@@ -151,6 +151,7 @@ button { cursor: pointer; }
 /* ---------- Notices ---------- */
 .notice { font-size: 0.85rem; color: var(--text-sub); padding: 12px 0 0; }
 .notice strong { color: var(--text-muted); font-weight: 600; }
+.notice a { color: var(--text); font-weight: 600; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 
 /* ---------- Canteen cards ---------- */
 .canteens { display: grid; gap: 16px; padding: 16px 0 32px; }

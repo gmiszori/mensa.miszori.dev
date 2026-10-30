@@ -853,45 +853,112 @@
     if (img.complete && img.naturalWidth === 0) dropPhoto(img);
   }
 
-  // ---------- offline ----------
+  // ---------- saved pages and offline ----------
   //
   // While online, sw.js is told the next three days with menus and saves them (at most once an
-  // hour). Offline, it shows a saved page instead, marked with data-offline: the time it was
-  // saved. Days that weren't saved are then left out of the picker. As soon as the device is
-  // back online, the notice goes and every day is there again.
+  // hour). It then shows a saved page at once, marked with data-saved: the time it was saved.
+  // checkSaved asks it to fetch the page again:
+  //   - menus changed: reload, which shows the copy just saved, unless the visitor already
+  //     started using the page; then a notice offers it instead, so nothing jumps while reading,
+  //   - no answer within OFFLINE_AFTER (at once when the device says it is offline): say so,
+  //     and leave out of the picker the days that weren't saved. Once back online, it asks again.
 
+  const OFFLINE_AFTER = 3000;
+  // When the check finds new menus, it notes the time the new copy was saved here (in this tab
+  // only), so the page that shows that copy next doesn't check it again.
+  const CHECKED = 'mp-checked';
   const dayOf = (link) => new URL(link.href).searchParams.get('day');
+  const dayLinks = [...document.querySelectorAll('[data-day-link]')];
+  const offlineNotice = document.getElementById('offline');
 
-  function showOffline() {
-    const saved = Number(body.dataset.offline);
-    if (!saved) return;
-    const el = document.getElementById('offline');
-    const dayLinks = [...document.querySelectorAll('[data-day-link]')];
-    let online = false;
-    window.addEventListener('online', () => {
-      online = true;
-      el.hidden = true;
+  function checkSaved() {
+    const saved = Number(body.dataset.saved);
+    if (!saved) return false;
+    showSavedDayNotice();
+    try {
+      if (sessionStorage.getItem(CHECKED) === String(saved)) {
+        sessionStorage.removeItem(CHECKED);
+        return false;
+      }
+    } catch { /* storage unavailable: check again */ }
+    let inUse = false;
+    for (const type of ['pointerdown', 'keydown', 'wheel', 'touchstart']) {
+      window.addEventListener(type, () => { inUse = true; }, { once: true, passive: true });
+    }
+    let answered = false;
+    const ask = () => (answered ? Promise.resolve() : askWorker({ refresh: body.dataset.date })).then((answer) => {
+      if (!answer?.online || answered) return;
+      answered = true;
+      clearTimeout(timer);
+      offlineNotice.hidden = true;
       for (const link of dayLinks) link.hidden = false;
-    }, { once: true });
-    el.hidden = false;
-    setText(el, 'offline', new Intl.DateTimeFormat('de-CH', {
+      if (!answer.changed) {
+        saveNextDays();
+        return;
+      }
+      try { sessionStorage.setItem(CHECKED, String(answer.saved)); } catch { /* checked again after the reload */ }
+      if (!inUse) location.reload();
+      else document.getElementById('new-menus').hidden = false;
+    });
+    const timer = setTimeout(() => { if (!answered) showOffline(saved); }, navigator.onLine === false ? 0 : OFFLINE_AFTER);
+    ask().then(() => { if (!answered) showOffline(saved); });
+    window.addEventListener('online', ask);
+    return true;
+  }
+
+  // askWorker sends sw.js a message and waits for its answer; undefined if it has none.
+  function askWorker(message) {
+    const worker = navigator.serviceWorker?.controller;
+    if (!worker) return Promise.resolve(undefined);
+    return new Promise((resolve) => {
+      const channel = new MessageChannel();
+      channel.port1.onmessage = (e) => resolve(e.data);
+      worker.postMessage(message, [channel.port2]);
+    });
+  }
+
+  function showOffline(saved) {
+    if (!offlineNotice.hidden) return;
+    offlineNotice.hidden = false;
+    setText(offlineNotice, 'offline', new Intl.DateTimeFormat('de-CH', {
       timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
     }).format(saved).replace(',', ''));
-    if (!('caches' in window)) return;
     caches.open('mp-pages').then((pages) => pages.keys()).then((keys) => {
-      if (online) return;
+      if (offlineNotice.hidden) return; // back online meanwhile
       const days = keys.map((request) => new URL(request.url).searchParams.get('day'));
       for (const link of dayLinks) link.hidden = !days.includes(dayOf(link));
     }, () => {});
   }
 
+  // A saved page is saved for its day, so it lacks the server's note when the address has no
+  // day and today has no menus ("No menus for Saturday 31 October. Showing Monday 2 November.").
+  function showSavedDayNotice() {
+    if (new URL(location.href).searchParams.has('day') || body.dataset.date === zurichDate()) return;
+    const long = (lang, date) => new Intl.DateTimeFormat(lang === 'de' ? 'de-CH' : 'en-GB', {
+      timeZone: 'Europe/Zurich', weekday: 'long', day: 'numeric', month: 'long',
+    }).format(date);
+    const shown = new Date(`${body.dataset.date}T12:00:00Z`);
+    const el = Object.assign(document.createElement('p'), { className: 'notice' });
+    el.append(...['en', 'de'].map((lang) => {
+      const [first, second] = [long(lang, new Date()), long(lang, shown)];
+      return Object.assign(document.createElement('span'), {
+        lang, textContent: (allTexts[lang]?.noMenusToday || '').replace('%s', first).replace('%s', second),
+      });
+    }));
+    offlineNotice.after(el);
+  }
+
+  function saveNextDays() {
+    const today = zurichDate();
+    const days = dayLinks.map(dayOf).filter((day) => day >= today).slice(0, 3);
+    navigator.serviceWorker.ready.then((registration) => registration.active?.postMessage({ save: days }));
+  }
+
   function keepOffline() {
     if (!('serviceWorker' in navigator)) return;
     navigator.serviceWorker.register('/sw.js').catch(() => { /* no offline copies, nothing else changes */ });
-    if (body.dataset.offline) return;
-    const today = zurichDate();
-    const days = [...document.querySelectorAll('[data-day-link]')].map(dayOf).filter((day) => day >= today).slice(0, 3);
-    navigator.serviceWorker.ready.then((registration) => registration.active?.postMessage({ save: days }));
+    // A saved page saves the next days once the check finds the server (see checkSaved).
+    if (!checkSaved()) saveNextDays();
   }
 
   // ---------- start ----------
@@ -903,7 +970,6 @@
   showPrices();
   showSettingsSheet();
   showMealLabel();
-  showOffline();
   for (const card of cards) {
     card.querySelector('[data-favourite]').setAttribute('aria-pressed', String(settings.fav.includes(card.dataset.id)));
   }

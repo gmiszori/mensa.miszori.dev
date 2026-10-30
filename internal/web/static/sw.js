@@ -14,8 +14,11 @@
 // Pages live in one cache, photos in another. A photo is kept as long as a saved page shows it,
 // so a day's photos go once the day has passed or is no longer one of the next three.
 //
-// Pages come from the network first; the saved copy is used when that fails or takes too long.
-// Photos and static files come from the saved copy first, since they never change.
+// A saved page opens at once, without waiting for the network. app.js then asks this worker to
+// fetch the page again (refreshPage); if the menus changed, it reloads (from the copy just saved),
+// and if there is no answer within a few seconds, it says the visitor is offline. Days that
+// weren't saved come from the network. Photos and static files come from the saved copy first,
+// since they never change.
 'use strict';
 
 const HOUR = 60 * 60 * 1000;
@@ -49,11 +52,17 @@ self.addEventListener('activate', (e) => e.waitUntil((async () => {
 
 // ---------- saving ----------
 
+const isDay = (d) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
+
 // Saves run one after another, so two open tabs don't download the same photos twice.
 let saving = Promise.resolve();
 self.addEventListener('message', (e) => {
+  if (isDay(e.data?.refresh)) {
+    e.waitUntil(refreshPage(e.data.refresh).then((answer) => e.ports[0]?.postMessage(answer)));
+    return;
+  }
   const days = e.data?.save;
-  if (!Array.isArray(days) || !days.every((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))) return;
+  if (!Array.isArray(days) || !days.every(isDay)) return;
   saving = saving.then(() => save(days.slice(0, 3))).catch(() => { /* offline or flaky: next time */ });
   e.waitUntil(saving);
 });
@@ -76,11 +85,49 @@ async function savePage(pages, day) {
   const response = await fetch(pageURL(day), { cache: 'no-store' });
   // A redirect means the day has passed.
   if (!response.ok || response.redirected) return;
+  await saveStatic(await storePage(pages, day, response));
+}
+
+// storePage saves a page fetched from the server, as saved at the time given, and returns its
+// HTML.
+async function storePage(pages, day, response, saved = Date.now()) {
   const html = await response.text();
   const headers = pageHeaders(response.headers);
-  headers.set('x-saved', String(Date.now()));
+  headers.set('x-saved', String(saved));
   await pages.put(pageURL(day), new Response(html, { headers }));
-  await saveStatic(html);
+  return html;
+}
+
+// refreshPage fetches a day's page again for app.js, which is showing the saved copy, and saves
+// it. It answers {online: false} when the server can't be reached, else whether the menus (or
+// the days, or the version of the CSS and JavaScript) differ from the copy shown, and when the
+// new copy was saved.
+async function refreshPage(day) {
+  try {
+    const pages = await caches.open(PAGES);
+    const shown = await pages.match(pageURL(day));
+    const response = await fetch(pageURL(day), { cache: 'no-store' });
+    if (response.status >= 500) return { online: false };
+    // A redirect means the day has passed while the page was open: reloading takes care of it.
+    if (!response.ok || response.redirected) return { online: true, changed: true };
+    const saved = Date.now();
+    const html = await storePage(pages, day, response, saved);
+    saving = saving.then(() => saveStatic(html)).catch(() => {});
+    return { online: true, changed: !shown || content(await shown.text()) !== content(html), saved };
+  } catch {
+    return { online: false };
+  }
+}
+
+// content is the part of a page that matters for comparing two copies: the menus, the list of
+// days and the version of the static files. Not the footer, whose time changes with every
+// refresh of the server, or the meal shown first, which depends on the time of day.
+function content(html) {
+  return [
+    html.slice(html.indexOf('<main'), html.indexOf('</main>')),
+    html.match(/<nav class="day-list"[\s\S]*?<\/nav>/)?.[0],
+    html.match(/\/static\/app\.js\?v=[0-9a-f]+/)?.[0],
+  ].join('\n');
 }
 
 // quietUntil is when saving may go on after the visitor opened a dish (see photo).
@@ -115,14 +162,16 @@ async function saveStatic(html) {
 }
 
 // removePages deletes the pages of days that have passed and, when keep isn't empty, of days
-// not in it. Their photos go with prunePhotos.
+// not in it, and says whether it deleted any. Their photos go with prunePhotos.
 async function removePages(keep) {
   const now = today();
   const pages = await caches.open(PAGES);
+  let removed = false;
   for (const request of await pages.keys()) {
     const day = dayOf(request.url);
-    if (day < now || (keep.length > 0 && !keep.includes(day))) await pages.delete(request);
+    if (day < now || (keep.length > 0 && !keep.includes(day))) removed = await pages.delete(request) || removed;
   }
+  return removed;
 }
 
 // prunePhotos deletes the photos no saved page shows any more. It returns the photo cache, the
@@ -175,22 +224,24 @@ async function photo(request) {
   return response;
 }
 
-// page answers from the network and falls back to a saved page when that fails. A server error
-// (during a deploy, say) counts as failing too, and so does no answer within NETWORK_WAIT: in
-// flight mode iPhones don't fail the request, they keep waiting for a connection. When the
-// device says it is offline, the network isn't tried at all.
+// page answers with the saved copy of the day when there is one, at once (app.js then checks
+// it is current, see refreshPage). Without the day in the address, that is the first saved day,
+// the one the server would show too. Other days come from the network, falling back to the first
+// saved day when that fails or takes too long: a server error (during a deploy, say) counts as
+// failing, and so does no answer within NETWORK_WAIT, since in flight mode iPhones don't fail the
+// request, they keep waiting for a connection. When the device says it is offline, the network
+// isn't tried at all.
 const NETWORK_WAIT = 3000;
 
 async function page(e, url) {
+  if (await removePages([])) e.waitUntil(prunePhotos()); // after answering, so the page isn't slowed down
+  const days = await savedDays();
+  const day = url.searchParams.get('day') || days[0];
+  if (days.includes(day)) return savedPage(day);
   const network = self.navigator.onLine === false ? Promise.reject(new Error('offline')) : fetch(e.request);
   const slow = new Promise((resolve) => setTimeout(resolve, NETWORK_WAIT, 'slow'));
   const first = await Promise.race([network.catch(() => null), slow]);
   if (first instanceof Response && first.status < 500) return first;
-  await removePages([]);
-  e.waitUntil(prunePhotos()); // after answering, so the page isn't slowed down
-  const days = await savedDays();
-  const day = url.searchParams.get('day') || days[0];
-  if (days.includes(day)) return savedPage(day);
   // A day that isn't saved: go to the first saved day instead, keeping the meal.
   if (days.length > 0) {
     const meal = url.searchParams.get('meal');
@@ -200,11 +251,11 @@ async function page(e, url) {
   return network.catch(() => Response.error());
 }
 
-// savedPage is the saved page of a day, marked with data-offline, the time it was saved, for
-// app.js to show.
+// savedPage is the saved page of a day, marked with data-saved, the time it was saved, so app.js
+// knows to check it is current.
 async function savedPage(day) {
   const saved = await (await caches.open(PAGES)).match(pageURL(day));
-  const html = (await saved.text()).replace('<body ', `<body data-offline="${Number(saved.headers.get('x-saved'))}" `);
+  const html = (await saved.text()).replace('<body ', `<body data-saved="${Number(saved.headers.get('x-saved'))}" `);
   return new Response(html, { headers: pageHeaders(saved.headers) });
 }
 
