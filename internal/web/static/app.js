@@ -856,14 +856,15 @@
   // ---------- saved pages and offline ----------
   //
   // While online, sw.js is told the next three days with menus and saves them (at most once an
-  // hour). It then shows a saved page at once, marked with data-saved: the time it was saved.
-  // checkSaved asks it to fetch the page again:
-  //   - menus changed: reload, which shows the copy just saved, unless the visitor already
-  //     started using the page; then a notice offers it instead, so nothing jumps while reading,
-  //   - no answer within OFFLINE_AFTER (at once when the device says it is offline): say so,
-  //     and leave out of the picker the days that weren't saved. Once back online, it asks again.
+  // hour). It then shows a saved page at once, marked with data-saved (the time it was saved)
+  // and data-saved-days. Until the server answers, the visitor counts as offline: the notice
+  // says so and the picker offers only the saved days, so no tap leads to a day that can't be
+  // shown. checkSaved asks sw.js to fetch the page again; once it has:
+  //   - the notice goes and every day is back (after a split second, when online),
+  //   - if the menus changed: reload, which shows the copy just saved, unless the visitor already
+  //     started using the page; then a notice offers it instead, so nothing jumps while reading.
+  // Without an answer it asks again as soon as the device is back online.
 
-  const OFFLINE_AFTER = 3000;
   // When the check finds new menus, it notes the time the new copy was saved here (in this tab
   // only), so the page that shows that copy next doesn't check it again.
   const CHECKED = 'mp-checked';
@@ -881,6 +882,7 @@
         return false;
       }
     } catch { /* storage unavailable: check again */ }
+    showOffline(saved);
     let inUse = false;
     for (const type of ['pointerdown', 'keydown', 'wheel', 'touchstart']) {
       window.addEventListener(type, () => { inUse = true; }, { once: true, passive: true });
@@ -889,7 +891,6 @@
     const ask = () => (answered ? Promise.resolve() : askWorker({ refresh: body.dataset.date })).then((answer) => {
       if (!answer?.online || answered) return;
       answered = true;
-      clearTimeout(timer);
       offlineNotice.hidden = true;
       for (const link of dayLinks) link.hidden = false;
       if (!answer.changed) {
@@ -900,8 +901,7 @@
       if (!inUse) location.reload();
       else document.getElementById('new-menus').hidden = false;
     });
-    const timer = setTimeout(() => { if (!answered) showOffline(saved); }, navigator.onLine === false ? 0 : OFFLINE_AFTER);
-    ask().then(() => { if (!answered) showOffline(saved); });
+    ask();
     window.addEventListener('online', ask);
     return true;
   }
@@ -918,16 +918,12 @@
   }
 
   function showOffline(saved) {
-    if (!offlineNotice.hidden) return;
     offlineNotice.hidden = false;
     setText(offlineNotice, 'offline', new Intl.DateTimeFormat('de-CH', {
       timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
     }).format(saved).replace(',', ''));
-    caches.open('mp-pages').then((pages) => pages.keys()).then((keys) => {
-      if (offlineNotice.hidden) return; // back online meanwhile
-      const days = keys.map((request) => new URL(request.url).searchParams.get('day'));
-      for (const link of dayLinks) link.hidden = !days.includes(dayOf(link));
-    }, () => {});
+    const days = (body.dataset.savedDays || '').split(' ');
+    for (const link of dayLinks) link.hidden = !days.includes(dayOf(link));
   }
 
   // A saved page is saved for its day, so it lacks the server's note when the address has no

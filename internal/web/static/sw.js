@@ -15,8 +15,8 @@
 // so a day's photos go once the day has passed or is no longer one of the next three.
 //
 // A saved page opens at once, without waiting for the network. app.js then asks this worker to
-// fetch the page again (refreshPage); if the menus changed, it reloads (from the copy just saved),
-// and if there is no answer within a few seconds, it says the visitor is offline. Days that
+// fetch the page again (refreshPage); until that succeeds, it treats the visitor as offline, and if
+// the menus changed, it reloads (from the copy just saved). Days that
 // weren't saved come from the network. Photos and static files come from the saved copy first,
 // since they never change.
 'use strict';
@@ -252,10 +252,11 @@ async function page(e, url) {
 }
 
 // savedPage is the saved page of a day, marked with data-saved, the time it was saved, so app.js
-// knows to check it is current.
+// knows to check it is current, and data-saved-days, the days it can offer until then.
 async function savedPage(day) {
   const saved = await (await caches.open(PAGES)).match(pageURL(day));
-  const html = (await saved.text()).replace('<body ', `<body data-saved="${Number(saved.headers.get('x-saved'))}" `);
+  const days = (await savedDays()).join(' ');
+  const html = (await saved.text()).replace('<body ', `<body data-saved="${Number(saved.headers.get('x-saved'))}" data-saved-days="${days}" `);
   return new Response(html, { headers: pageHeaders(saved.headers) });
 }
 
