@@ -63,14 +63,25 @@ self.addEventListener('message', (e) => {
   }
   const days = e.data?.save;
   if (!Array.isArray(days) || !days.every(isDay)) return;
-  saving = saving.then(() => save(days.slice(0, 3))).catch(() => { /* offline or flaky: next time */ });
+  const version = /^[0-9a-f]+$/.test(e.data.version) ? e.data.version : undefined;
+  saving = saving.then(() => save(days.slice(0, 3), version)).catch(() => { /* offline or flaky: next time */ });
   e.waitUntil(saving);
 });
 
-async function save(days) {
+// save saves the pages of days, then their photos. version is that of the static files of the
+// page asking, which is current: it came from the server or was just checked against it.
+async function save(days, version) {
   const pages = await caches.open(PAGES);
   for (const day of days) await savePage(pages, day);
+  // After a deploy, pages saved within the hour still use the old CSS and JavaScript (and
+  // behave like the old version offline): fetch them again, so all match the current one.
+  const versions = await pageVersions();
+  const newest = version || [...versions.values()].sort((a, b) => b.saved - a.saved)[0]?.version;
+  for (const day of days) {
+    if (versions.get(day) && versions.get(day).version !== newest) await savePage(pages, day, true);
+  }
   await removePages(days);
+  await pruneStatic();
   const { photos, wanted, have } = await prunePhotos();
   const missing = [...wanted].filter((url) => !have.has(url));
   await inParallel(missing.filter((url) => !url.includes('-large')), 4, (url) => savePhoto(photos, url));
@@ -78,10 +89,11 @@ async function save(days) {
 }
 
 // savePage saves one day's page, and with it the static files, unless it was saved within the
-// last hour. Pages saved without the security headers (by the first versions) are saved again.
-async function savePage(pages, day) {
+// last hour (or force is set). Pages saved without the security headers (by the first versions)
+// are saved again.
+async function savePage(pages, day, force = false) {
   const saved = await pages.match(pageURL(day));
-  if (saved && Date.now() - Number(saved.headers.get('x-saved')) < HOUR && saved.headers.has('Content-Security-Policy')) return;
+  if (!force && saved && Date.now() - Number(saved.headers.get('x-saved')) < HOUR && saved.headers.has('Content-Security-Policy')) return;
   const response = await fetch(pageURL(day), { cache: 'no-store' });
   // A redirect means the day has passed.
   if (!response.ok || response.redirected) return;
@@ -112,7 +124,7 @@ async function refreshPage(day) {
     if (!response.ok || response.redirected) return { online: true, changed: true };
     const saved = Date.now();
     const html = await storePage(pages, day, response, saved);
-    saving = saving.then(() => saveStatic(html)).catch(() => {});
+    saving = saving.then(() => saveStatic(html)).then(pruneStatic).catch(() => {});
     return { online: true, changed: !shown || content(await shown.text()) !== content(html), saved };
   } catch {
     return { online: false };
@@ -140,10 +152,26 @@ async function savePhoto(photos, url) {
   if (response?.ok) await photos.put(url, response);
 }
 
+// The version of the static files a page uses: the ?v= of its links, see staticVersion in
+// server.go.
+const versionOf = (html) => html.match(/\/static\/app\.js\?v=([0-9a-f]+)/)?.[1];
+
+// pageVersions maps each saved day to the version of the static files its page uses and when
+// it was saved.
+async function pageVersions() {
+  const pages = await caches.open(PAGES);
+  const versions = new Map();
+  for (const request of await pages.keys()) {
+    const page = await pages.match(request);
+    versions.set(dayOf(request.url), { version: versionOf(await page.clone().text()), saved: Number(page.headers.get('x-saved')) });
+  }
+  return versions;
+}
+
 // saveStatic saves the CSS, JavaScript, icons and fonts the page uses, once per version of
-// the static files, and deletes those of older versions.
+// the static files.
 async function saveStatic(html) {
-  const version = html.match(/\/static\/app\.js\?v=([0-9a-f]+)/)?.[1];
+  const version = versionOf(html);
   if (!version) return;
   const name = STATIC_PREFIX + version;
   const cache = await caches.open(name);
@@ -156,8 +184,14 @@ async function saveStatic(html) {
   for (const url of urls) {
     if (!(await cache.match(url))) await cache.add(url).catch(() => { /* next time */ });
   }
+}
+
+// pruneStatic deletes the static files of versions no saved page uses any more. Those a saved
+// page still uses stay, so it keeps working offline until it is saved again.
+async function pruneStatic() {
+  const used = new Set([...(await pageVersions()).values()].map((v) => STATIC_PREFIX + v.version));
   for (const key of await caches.keys()) {
-    if (key.startsWith(STATIC_PREFIX) && key !== name) await caches.delete(key);
+    if (key.startsWith(STATIC_PREFIX) && !used.has(key)) await caches.delete(key);
   }
 }
 

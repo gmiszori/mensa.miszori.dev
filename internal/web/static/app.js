@@ -947,7 +947,8 @@
   function saveNextDays() {
     const today = zurichDate();
     const days = dayLinks.map(dayOf).filter((day) => day >= today).slice(0, 3);
-    navigator.serviceWorker.ready.then((registration) => registration.active?.postMessage({ save: days }));
+    const version = new URL(document.querySelector('script[src*="/static/app.js"]').src).searchParams.get('v');
+    navigator.serviceWorker.ready.then((registration) => registration.active?.postMessage({ save: days, version }));
   }
 
   function keepOffline() {
