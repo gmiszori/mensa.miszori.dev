@@ -3,8 +3,6 @@ package web
 import (
 	"html"
 	"html/template"
-	"net/http"
-	"strings"
 )
 
 // The server stores nothing about visitors and reads no cookie. Every text is sent in both
@@ -12,14 +10,10 @@ import (
 // the page's language. The visitor's choice of language, like all other settings, lives in the
 // browser (localStorage): static/boot.js sets the page's language before anything is drawn.
 
-// browserLang is the page's language until the visitor picks one: German if the browser
-// prefers it, else English. Only search engines and visitors without JavaScript keep it.
-func browserLang(r *http.Request) string {
-	if strings.HasPrefix(strings.ToLower(r.Header.Get("Accept-Language")), "de") {
-		return "de"
-	}
-	return "en"
-}
+// pageLang is the page's language as sent: the same for every visitor, so Cloudflare can keep
+// one copy of each page. boot.js switches to German when the visitor picked it or the browser
+// prefers it; only search engines, link previews and visitors without JavaScript keep this.
+const pageLang = "en"
 
 // both returns a text in English and German as HTML: two spans, of which the stylesheet shows
 // the one in the page's language, or the text alone when both are the same. Both texts are

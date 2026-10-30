@@ -71,8 +71,8 @@ Browser ─► proxy ─► Caddy (HTTPS) ─► Mensaplan Zürich ◄───�
 2. **Storing.** Menus live in memory and are saved to `data/menus.json` after every refresh. A
    few weeks of menus for ~35 canteens is well under a megabyte, so there is no database.
 3. **Showing.** Every page request renders the HTML from the stored menus, the same for every
-   visitor, with every text in English and German. In the browser, `boot.js` sets the saved
-   language and theme before anything is drawn. `app.js` then applies the other settings
+   visitor, with every text in English and German. In the browser, `boot.js` sets the
+   language (the saved one, else the browser's) and theme before anything is drawn. `app.js` then applies the other settings
    (prices, filters, favourites, starred dishes) while placeholder cards show, filters
    instantly as you type or change settings, and animates opening dishes.
 4. **Photos.** The first request for a photo downloads the original once. It saves a 168 px
@@ -125,6 +125,11 @@ All images are pinned by digest: Caddy in `docker-compose.yml`, Go and the runti
 `Dockerfile`. To update one, change its tag and digest there
 (`docker buildx imagetools inspect <image>` shows the digest).
 
+Behind Cloudflare, the page can be answered from Cloudflare's copy, up to a minute old (it
+sends `CDN-Cache-Control: max-age=60`). Cloudflare only keeps HTML pages when a Cache Rule says
+so: for requests with URI path equal to `/`, set *Eligible for cache*, Edge TTL *Use cache-control
+header if present*, and Browser TTL *Respect origin*, so browsers keep asking again.
+
 Logs: `docker compose logs -f`. Caddy writes one line per request. Docker keeps at most
 30 MB of logs per container.
 To try the production setup locally, start the proxy first with `PUBLIC_BIND_IP=127.0.0.1` and
@@ -143,10 +148,9 @@ with a local certificate.
   its own origin. This blocks injected scripts and third-party tracking.
 - **Escaped output.** Menu texts come from other websites and are always HTML-escaped by Go's
   templates, so a dish name can't inject markup.
-- **No cookies, no settings on the server.** The page is the same for everyone, apart from its
-  default language, taken from the browser's `Accept-Language` header; settings stay in the
-  browser. There is nothing for the server to parse or store per visitor, and request
-  headers are capped at 32 KB.
+- **No cookies, no settings on the server.** The page is the same for everyone; the language and
+  all other settings are applied in the browser. There is nothing for the server to parse or
+  store per visitor, and request headers are capped at 32 KB.
 - **No open photo proxy.** `/photos/` serves only photos of dishes on the menus, looked up by a
   hash. Anyone else's URLs, and paths that try to leave the cache folder, get a 404. Photos are
   downloaded only from ETH's and FOOD2050's image addresses, redirects included, so a broken

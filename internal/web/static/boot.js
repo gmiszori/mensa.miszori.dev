@@ -20,7 +20,10 @@
     settings = JSON.parse(localStorage.getItem('mp') || '{}') || {};
   } catch { /* storage unavailable or broken: defaults */ }
 
+  // The server sends every page in English, the same for everyone so Cloudflare can keep a
+  // copy; until the visitor picks a language, it follows the browser's.
   if (settings.lang === 'en' || settings.lang === 'de') root.lang = settings.lang;
+  else if ((navigator.languages?.[0] || navigator.language || '').toLowerCase().startsWith('de')) root.lang = 'de';
   if (settings.theme === 'light' || settings.theme === 'dark') root.dataset.theme = settings.theme;
   root.classList.add('loading');
   setTimeout(() => root.classList.remove('loading'), 3000);

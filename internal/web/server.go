@@ -83,14 +83,21 @@ func (s *Server) home(w http.ResponseWriter, r *http.Request) {
 			} else {
 				q.Del("day")
 			}
+			// Not kept by Cloudflare either: "today" changes at midnight.
+			w.Header().Set("Cache-Control", "no-store")
 			http.Redirect(w, r, "/?"+q.Encode(), http.StatusFound)
 			return
 		}
 	}
-	data := s.buildPage(browserLang(r), q.Get("day"), q.Get("meal"), now)
+	data := s.buildPage(pageLang, q.Get("day"), q.Get("meal"), now)
 	data.SiteURL = s.siteURL(r)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store") // menus and settings change; always render fresh
+	// Browsers always ask again, since menus change. Cloudflare may answer from a copy up to a
+	// minute old, which is faster than asking the server when others just opened the page. The
+	// page is the same for everyone (see pageLang); what depends on the time of day, like which
+	// canteens are open, app.js works out in the browser.
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("CDN-Cache-Control", "max-age=60")
 	if err := s.page.Execute(w, data); err != nil {
 		s.Log.Error("rendering page", "err", err)
 	}
@@ -116,7 +123,7 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) {
 // pageData is everything the template shows. It is the same for every visitor: their
 // settings are applied in the browser.
 type pageData struct {
-	Lang    string                                      // browserLang: the language until app.js knows better
+	Lang    string                                      // pageLang: the language until boot.js knows better
 	T       func(key string, args ...any) string        // a text in Lang, for attributes and meta tags
 	B       func(key string, args ...any) template.HTML // a text in both languages, see tr
 	Version string                                      // appended to CSS and JS links, so browsers fetch new versions
