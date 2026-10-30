@@ -857,14 +857,17 @@
   //
   // While online, sw.js is told the next three days with menus and saves them (at most once an
   // hour). It then shows a saved page at once, marked with data-saved (the time it was saved)
-  // and data-saved-days. Until the server answers, the visitor counts as offline: the notice
-  // says so and the picker offers only the saved days, so no tap leads to a day that can't be
-  // shown. checkSaved asks sw.js to fetch the page again; once it has:
-  //   - the notice goes and every day is back (after a split second, when online),
+  // and data-saved-days. Until the server answers, the visitor counts as offline: the picker
+  // offers only the saved days, so no tap leads to a day that can't be shown. The notice saying
+  // so waits OFFLINE_AFTER, so it doesn't flash when the answer comes quickly, unless the device
+  // says it is offline or the request fails. checkSaved asks sw.js to fetch the page again; once
+  // it has:
+  //   - the notice goes (if shown) and every day is back,
   //   - if the menus changed: reload, which shows the copy just saved, unless the visitor already
   //     started using the page; then a notice offers it instead, so nothing jumps while reading.
   // Without an answer it asks again as soon as the device is back online.
 
+  const OFFLINE_AFTER = 1000;
   // When the check finds new menus, it notes the time the new copy was saved here (in this tab
   // only), so the page that shows that copy next doesn't check it again.
   const CHECKED = 'mp-checked';
@@ -882,7 +885,9 @@
         return false;
       }
     } catch { /* storage unavailable: check again */ }
-    showOffline(saved);
+    showSavedDays();
+    const showSoon = setTimeout(() => showOffline(saved), OFFLINE_AFTER);
+    if (navigator.onLine === false) showOffline(saved);
     let inUse = false;
     for (const type of ['pointerdown', 'keydown', 'wheel', 'touchstart']) {
       window.addEventListener(type, () => { inUse = true; }, { once: true, passive: true });
@@ -891,6 +896,7 @@
     const ask = () => (answered ? Promise.resolve() : askWorker({ refresh: body.dataset.date })).then((answer) => {
       if (!answer?.online || answered) return;
       answered = true;
+      clearTimeout(showSoon);
       offlineNotice.hidden = true;
       for (const link of dayLinks) link.hidden = false;
       if (!answer.changed) {
@@ -901,7 +907,7 @@
       if (!inUse) location.reload();
       else document.getElementById('new-menus').hidden = false;
     });
-    ask();
+    ask().then(() => { if (!answered) showOffline(saved); }); // the request failed
     window.addEventListener('online', ask);
     return true;
   }
@@ -922,6 +928,10 @@
     setText(offlineNotice, 'offline', new Intl.DateTimeFormat('de-CH', {
       timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
     }).format(saved).replace(',', ''));
+  }
+
+  // showSavedDays leaves only the saved days in the picker.
+  function showSavedDays() {
     const days = (body.dataset.savedDays || '').split(' ');
     for (const link of dayLinks) link.hidden = !days.includes(dayOf(link));
   }
