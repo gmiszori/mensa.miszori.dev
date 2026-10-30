@@ -17,6 +17,9 @@ database and no accounts. The code was written with AI under my direction.
   real prices for students, staff and external guests.
 - **Dish details.** Tap a dish to see its photo large, its ingredients, allergens and all
   prices. Only one dish is open at a time, centred on the screen.
+- **Nutrition values.** The Nutrition button shows energy, fat, carbohydrates, sugars, fibre,
+  protein and salt per 100 g, and for the whole portion where the canteen publishes its weight.
+  A setting shows them on every opened dish without the button.
 - **Your campuses, your diet.** Settings show only the campuses you pick, only vegetarian or
   vegan dishes, and hide dishes with the allergens you choose. Changes apply immediately.
 - **Your budget.** A slider hides dishes that cost more than you want to pay, for your price
@@ -31,6 +34,35 @@ database and no accounts. The code was written with AI under my direction.
 - **No account, nothing sent.** Settings stay in your browser (localStorage) and never reach the
   server: there are no cookies.
 - **German and English, light and dark.** The language follows the browser until you pick one.
+
+## Why Mensaplan Zürich
+
+The most complete and the fastest way to see what's for lunch in Zürich, on any phone, with no
+app to install.
+
+| | **This** | Official sites<br>([ETH](https://ethz.ch/de/campus/erleben/gastronomie-und-einkaufen/gastronomie/menueplaene.html), [UZH](https://www.mensa.uzh.ch/)) | [ETH Mensa](https://apps.apple.com/app/id1613899399) | [MensaZH](https://github.com/fflopsi/mensa-zh) | [Zmittag](https://lukasaxelsen.github.io/eth-uzh-zmittag/) | [Ask Claude](https://claude.ai) |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| Favourite canteens on top | ✅ | ❌ | ❌¹ | ✅ | ❌ | ✅² |
+| Starred dishes, marked on any day | ✅ | ❌ | ❌ | ❌ | ❌ | ✅² |
+| Vegetarian or vegan only | ✅ | ✅³ | ❌ | ✅ | ❌ | ✅² |
+| Hide your allergens | ✅ | ✅⁴ | ✅ | ❌ | ❌ | ✅² |
+| Budget limit for your price group | ✅ | ❌ | ❌ | ❌ | ❌ | ✅² |
+| Nearest canteen first | ✅ | ❌ | ❌ | ❌ | ❌ | ✅² |
+| Works offline | ✅⁵ | ❌ | ✅ | ✅ | ❌ | ❌ |
+| Exact menus, straight from the source | ✅ | ✅ | ✅ | ✅ | ✅ | ❌⁶ |
+| No install, any phone | ✅ | ✅ | ❌ | ❌ | ✅ | ❌⁷ |
+
+¹ It moves the canteens you open most to the top on its own.\
+² Only if you ask for it.\
+³ Only on UZH's menu pages, one canteen at a time.\
+⁴ Only on UZH's menu pages, one canteen at a time, and only gluten and lactose.\
+⁵ The next three days with menus are saved.\
+⁶ A language model can skip or misread a dish.\
+⁷ It needs a Claude account.
+
+Compared in October 2026.
+
+[![Open mensa.miszori.dev](https://img.shields.io/badge/open-mensa.miszori.dev-19c37d?style=for-the-badge)](https://mensa.miszori.dev)
 
 ## Quick start
 
@@ -85,7 +117,7 @@ Browser ─► proxy ─► Caddy (HTTPS) ─► Mensaplan Zürich ◄───�
 | `internal/catalog/` | The list of canteens (`canteens.json`): name, campus, address and where each menu comes from. **Add or fix a canteen here.** |
 | `internal/menu/` | The data model (day, meal, dish), the store that saves `data/menus.json`, and clean-up of allergen names and ALL-CAPS names. |
 | `internal/eth/` | Reads ETH's weekly menu plans in English and German. |
-| `internal/food2050/` | Reads FOOD2050 weekly pages and dish pages (prices, photo) by decoding the Next.js data in them. |
+| `internal/food2050/` | Reads FOOD2050 weekly pages and dish pages (prices, photo, nutrition values) by decoding the Next.js data in them. |
 | `internal/refresh/` | Runs both sources on a timer and writes into the store. |
 | `internal/photos/` | Downloads, resizes and caches dish photos. It serves only photos of dishes on the menus. |
 | `internal/web/` | The web server: routes, all texts in English and German, the page template, and `static/` (CSS, JavaScript, fonts). |
@@ -93,7 +125,7 @@ Browser ─► proxy ─► Caddy (HTTPS) ─► Mensaplan Zürich ◄───�
 
 Routes: `/` is the page (`?day=YYYY-MM-DD&meal=lunch|dinner`).
 `/photos/<key>.jpg` and `/photos/<key>-large.jpg` serve photos. `/healthz` answers while the
-server runs (Docker's health check uses it) and lists sources that haven't refreshed for 6 hours
+server runs (Docker's health check uses it), shows the running version and lists sources that haven't refreshed for 6 hours
 as `stale`. Caddy keeps it inside the Docker network; to see it on the server, run
 `docker compose exec mensaplan /mensaplan healthcheck`. An outside uptime monitor watches the
 home page.
@@ -124,6 +156,29 @@ in the `data` volume and certificates in `caddy_data`, so restarts and updates l
 All images are pinned by digest: Caddy in `docker-compose.yml`, Go and the runtime image in the
 `Dockerfile`. To update one, change its tag and digest there
 (`docker buildx imagetools inspect <image>` shows the digest).
+
+### Versions
+
+The running version is in the file `VERSION` (e.g. `1.0.0`). `/healthz` and the start-up log
+show it. To release, raise it in the release commit, then tag that commit with the same number
+and push the tag:
+
+```bash
+git tag v1.0.0
+```
+
+```bash
+git push origin v1.0.0
+```
+
+The Release workflow then creates the GitHub Release, listing the commits since the previous
+tag. It fails if the tag and `VERSION` differ.
+
+Deploys keep what visitors and the server saved, so new code must read what old code wrote.
+Visitors' settings carry a format version (`v` in localStorage), and `app.js` converts older
+settings step by step (`MIGRATIONS`) instead of resetting them. `data/menus.json` does the same
+with its `version` field and the `migrations` in `internal/menu/store.go`. Both keep data from
+newer code as it is, so rolling back is safe too.
 
 Behind Cloudflare, the page can be answered from Cloudflare's copy, up to a minute old (it
 sends `CDN-Cache-Control: max-age=60`). Cloudflare only keeps HTML pages when a Cache Rule says
