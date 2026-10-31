@@ -105,7 +105,7 @@
         {{range .Dishes}}
         <li class="dish" data-order="{{.Order}}" data-diet="{{.Diet}}" data-allergens="{{.AllergenIDs}}" data-name="{{.NameEN}}" data-name-de="{{.NameDE}}"
             data-student="{{price .Prices.Student}}" data-staff="{{price .Prices.Staff}}" data-external="{{price .Prices.External}}"
-            {{- if .Nutrition}} data-nutrition="{{.Nutrition}}"{{end}}{{if .Portion}} data-portion="{{.Portion}}" data-portion-g="{{.PortionGrams}}"{{end}}>
+            {{- if .Nutrition}} data-nutrition="{{.Nutrition}}"{{end}}{{if .PortionGrams}} data-portion-g="{{.PortionGrams}}"{{end}}>
           <details>
             <summary class="dish-row{{if .Photo}} has-photo{{end}}">
               {{if .Photo}}<img class="thumb" src="/photos/{{.Photo}}.jpg" alt="" loading="lazy" width="56" height="56">
@@ -117,12 +117,10 @@
             </summary>
             <dl class="dish-detail">
               <dt>{{call $.B "allergens"}}</dt><dd>{{if .AllergenIDs}}{{.Allergens}}{{else}}{{call $.B "noAllergens"}}{{end}}</dd>
-              <dt>{{call $.B "prices"}}</dt>
-              <dd class="prices">{{call $.B "student"}} {{price .Prices.Student}} · {{call $.B "staff"}} {{price .Prices.Staff}} · {{call $.B "external"}} {{price .Prices.External}}</dd>
               <dd class="actions">
-                {{- if .Nutrition}}<button class="chip" type="button" data-nutrition-toggle aria-expanded="false">{{call $.B "nutrition"}}</button>
+                {{- if .Nutrition}}<button class="link" type="button" data-nutrition-toggle aria-expanded="false"><span class="when-closed">{{call $.B "allValues"}}</span><span class="when-open">{{call $.B "hideValues"}}</span></button>
                 {{- else}}<span class="no-nutrition">{{call $.B "noNutrition"}}</span>{{end -}}
-                <button class="chip" type="button" data-star aria-pressed="false"><span class="star-off">☆ {{call $.B "star"}}</span><span class="star-on">★ {{call $.B "starred"}}</span></button></dd>
+                <button class="chip small" type="button" data-star aria-pressed="false"><span class="star-off">☆ {{call $.B "star"}}</span><span class="star-on">★ {{call $.B "starred"}}</span></button></dd>
             </dl>
           </details>
         </li>
@@ -132,21 +130,30 @@
     </section>
     {{end}}
   </div>
-  <!-- app.js fills a copy of this into a dish when its nutrition button is tapped. -->
-  <template id="nutrition-table">
-    <table class="nutrition">
-      <thead><tr><td></td><th scope="col">{{call .B "per100g"}}</th><th scope="col">{{call .B "portion"}} <span data-grams></span></th></tr></thead>
-      <tbody>
-      <tr data-key="energy"><th scope="row">{{call .B "energy"}}</th><td></td><td></td></tr>
-      <tr data-key="fat"><th scope="row">{{call .B "fat"}}</th><td></td><td></td></tr>
-      <tr data-key="saturates" class="sub"><th scope="row">{{call .B "saturates"}}</th><td></td><td></td></tr>
-      <tr data-key="carbohydrates"><th scope="row">{{call .B "carbohydrates"}}</th><td></td><td></td></tr>
-      <tr data-key="sugars" class="sub"><th scope="row">{{call .B "sugars"}}</th><td></td><td></td></tr>
-      <tr data-key="fibre"><th scope="row">{{call .B "fibre"}}</th><td></td><td></td></tr>
-      <tr data-key="protein"><th scope="row">{{call .B "protein"}}</th><td></td><td></td></tr>
-      <tr data-key="salt"><th scope="row">{{call .B "salt"}}</th><td></td><td></td></tr>
-      </tbody>
-    </table>
+  <!-- app.js fills a copy of these into a dish: the summary when it opens, the list of all
+       values when its "All values" button is tapped. -->
+  <template id="nutrition-summary">
+    <dt>{{call .B "nutrition"}} · {{call .B "per100g"}}<span data-portion> ({{call .B "portion"}} <span data-grams></span>)</span></dt>
+    <dd class="macros">
+      <div data-key="energy"><b></b><span>kcal</span></div>
+      <div data-key="carbohydrates"><b></b><span>{{call .B "carbs"}}</span></div>
+      <div data-key="fat"><b></b><span>{{call .B "fat"}}</span></div>
+      <div data-key="protein"><b></b><span>{{call .B "protein"}}</span></div>
+    </dd>
+  </template>
+  <template id="nutrition-list">
+    <dd class="nutrition-wrap" hidden>
+      <dl class="nutrition">
+        <div data-key="energy"><dt>{{call .B "energy"}}</dt><dd></dd></div>
+        <div data-key="fat"><dt>{{call .B "fat"}}</dt><dd></dd></div>
+        <div data-key="saturates" class="sub"><dt>{{call .B "saturates"}}</dt><dd></dd></div>
+        <div data-key="carbohydrates"><dt>{{call .B "carbohydrates"}}</dt><dd></dd></div>
+        <div data-key="sugars" class="sub"><dt>{{call .B "sugars"}}</dt><dd></dd></div>
+        <div data-key="fibre"><dt>{{call .B "fibre"}}</dt><dd></dd></div>
+        <div data-key="protein"><dt>{{call .B "protein"}}</dt><dd></dd></div>
+        <div data-key="salt"><dt>{{call .B "salt"}}</dt><dd></dd></div>
+      </dl>
+    </dd>
   </template>
   <p class="empty" id="no-results" hidden>{{call .B "noResults"}}</p>
 
@@ -207,16 +214,6 @@
         <button type="button" value="vegan" aria-pressed="false">{{call .B "vegan"}}</button>
       </div>
     </div>
-  </div>
-  <div class="setting">
-    <div class="setting-head">
-      <h3>{{call .B "setNutrition"}}</h3>
-      <div class="segmented" data-setting="nutrition">
-        <button type="button" value="" aria-pressed="true">{{call .B "off"}}</button>
-        <button type="button" value="1" aria-pressed="false">{{call .B "on"}}</button>
-      </div>
-    </div>
-    <p>{{call .B "setNutritionHelp"}}</p>
   </div>
   <div class="setting">
     <div class="setting-head">

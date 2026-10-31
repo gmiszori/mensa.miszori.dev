@@ -30,14 +30,19 @@
   // never thrown away. To change the format: add a step to MIGRATIONS and raise
   // SETTINGS_VERSION. boot.js reads lang and theme before this runs, so those two keep their
   // meaning in every version.
-  const SETTINGS_VERSION = 1;
+  const SETTINGS_VERSION = 2;
   const MIGRATIONS = {
     // 0, settings saved before they had a version: the same format as version 1, which added
     // the nutrition setting (off unless set).
     0: (s) => s,
+    // 1: the "always show nutrition" setting is gone.
+    1: (s) => {
+      delete s.nutrition;
+      return s;
+    },
   };
   // On/off settings, saved as true or false.
-  const SWITCHES = ['open', 'near', 'nutrition'];
+  const SWITCHES = ['open', 'near'];
 
   function readSettings() {
     let parsed = {};
@@ -555,7 +560,7 @@
       setExpanded(closing, false);
     }
     if (opening) {
-      if (alwaysNutrition()) addNutrition(opening);
+      addSummary(opening);
       opening.open = true;
       setExpanded(opening, photoReady);
     }
@@ -638,66 +643,44 @@
 
   // ---------- nutrition ----------
   //
-  // A dish carries its nutrition values as numbers (see nutrients in server.go); the table
-  // with its labels is in the page once, as a <template>, and is copied in when first shown.
+  // A dish carries its nutrition values per 100 g as numbers (see nutrients in server.go);
+  // the labels are in the page once, as <template>s, and are copied in when first shown.
 
   const NUTRIENTS = ['energy', 'fat', 'saturates', 'carbohydrates', 'sugars', 'fibre', 'protein', 'salt'];
   const KJ_PER_KCAL = 4.184;
   const published = (v) => v !== undefined && v !== '-';
-  // Energy gets two lines, kcal over kJ, so two columns fit on a phone.
-  const amount = (key, v) => {
-    if (!published(v)) return ['–'];
-    return key === 'energy' ? [`${v} kcal`, `${Math.round(v * KJ_PER_KCAL)} kJ`] : [`${Number(v)} g`];
-  };
-  const fill = (cell, lines) => cell.replaceChildren(...lines.flatMap((line, i) => (i ? [document.createElement('br'), line] : [line])));
 
-  function nutritionTable(dish) {
-    const table = document.getElementById('nutrition-table').content.firstElementChild.cloneNode(true);
-    const per100g = dish.dataset.nutrition.split(' ');
-    const portion = dish.dataset.portion?.split(' ');
-    if (portion) table.querySelector('[data-grams]').textContent = `(${dish.dataset.portionG} g)`;
-    else for (const row of table.rows) row.lastElementChild.remove();
-    NUTRIENTS.forEach((key, i) => {
-      const row = table.querySelector(`[data-key="${key}"]`);
-      if (!published(per100g[i]) && !published(portion?.[i])) {
-        row.remove();
-        return;
-      }
-      fill(row.cells[1], amount(key, per100g[i]));
-      if (portion) fill(row.cells[2], amount(key, portion[i]));
-    });
-    const wrap = document.createElement('dd');
-    wrap.className = 'nutrition-wrap';
-    wrap.append(table);
-    return wrap;
+  // The summary: the four values most people look for.
+  function addSummary(details) {
+    const dish = details.closest('.dish');
+    if (!dish.dataset.nutrition || details.querySelector('.macros')) return;
+    const summary = document.getElementById('nutrition-summary').content.cloneNode(true);
+    const values = dish.dataset.nutrition.split(' ');
+    if (dish.dataset.portionG) summary.querySelector('[data-grams]').textContent = `${dish.dataset.portionG} g`;
+    else summary.querySelector('[data-portion]').remove();
+    for (const item of summary.querySelectorAll('[data-key]')) {
+      const v = values[NUTRIENTS.indexOf(item.dataset.key)];
+      item.querySelector('b').textContent = !published(v) ? '–' : item.dataset.key === 'energy' ? v : `${Number(v)} g`;
+    }
+    details.querySelector('.actions').before(summary);
   }
 
-  // The dish's table, added after its buttons the first time it's needed. With "always show
-  // nutrition" on, it is shown right away and app.css hides the button.
-  const alwaysNutrition = () => settings.nutrition === true;
+  // The list of all values, added after the dish's buttons the first time it's opened.
   function addNutrition(details) {
     const actions = details.querySelector('.actions');
-    const dish = details.closest('.dish');
     let wrap = actions.nextElementSibling;
-    if (!dish.dataset.nutrition || wrap?.classList.contains('nutrition-wrap')) return wrap;
-    wrap = nutritionTable(dish);
-    wrap.hidden = !alwaysNutrition();
+    if (wrap?.classList.contains('nutrition-wrap')) return wrap;
+    wrap = document.getElementById('nutrition-list').content.firstElementChild.cloneNode(true);
+    const values = details.closest('.dish').dataset.nutrition.split(' ');
+    NUTRIENTS.forEach((key, i) => {
+      const row = wrap.querySelector(`[data-key="${key}"]`);
+      const v = values[i];
+      if (!published(v)) row.remove();
+      else row.querySelector('dd').textContent = key === 'energy' ? `${v} kcal · ${Math.round(v * KJ_PER_KCAL)} kJ` : `${Number(v)} g`;
+    });
     actions.after(wrap);
     return wrap;
   }
-
-  // Tables already added follow the setting; with it off, a table stays open only if its
-  // button was tapped.
-  function showNutritionSetting() {
-    root.classList.toggle('always-nutrition', alwaysNutrition());
-    const open = grid.querySelector('details[open]');
-    if (open && alwaysNutrition()) addNutrition(open);
-    for (const wrap of grid.querySelectorAll('.nutrition-wrap')) {
-      const button = wrap.previousElementSibling.querySelector('[data-nutrition-toggle]');
-      wrap.hidden = !alwaysNutrition() && button?.getAttribute('aria-expanded') !== 'true';
-    }
-  }
-  showNutritionSetting();
 
   function toggleNutrition(button) {
     const open = button.getAttribute('aria-expanded') !== 'true';
@@ -894,7 +877,6 @@
     theme: showTheme,
     lang: () => { showLanguage(); showBudget(); },
     near: locate,
-    nutrition: showNutritionSetting,
   };
 
   // Shows the saved settings in the sheet's buttons.

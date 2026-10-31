@@ -21,13 +21,21 @@
 :root {
   --bg: #ffffff;
   --text: #0a0a0a;
-  --text-muted: #454545;
-  --text-sub: #6b6b6b;
-  --line: #e4e4e4;
-  --border: #c8c8c8;
+  --text-muted: #333333;
+  --text-sub: #555555;
+  --line: #d6d6d6;
+  --border: #bdbdbd;
   --pill-bg: rgba(0, 0, 0, 0.04);
   --green-mark: #19c37d;
   --green-band: #e3f8ee;
+  --diet-vegan: #0b7a4b;
+  --diet-vegan-bg: #e3f8ee;
+  --diet-veggie: #5b6b0f;
+  --diet-veggie-bg: #eef4d6;
+  --diet-meat: #a33a1b;
+  --diet-meat-bg: #fbe9e3;
+  --diet-fish: #1d5f9e;
+  --diet-fish-bg: #e5f0fb;
 
   --font-sans: 'Instrument Sans Variable', 'Instrument Sans', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
@@ -41,27 +49,43 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     --bg: #000000;
-    --text: #f5f5f5;
-    --text-muted: #c4c4c4;
-    --text-sub: #8f8f8f;
-    --line: #262626;
-    --border: #3a3a3a;
+    --text: #ffffff;
+    --text-muted: #d4d4d4;
+    --text-sub: #b5b5b5;
+    --line: #3a3a3a;
+    --border: #4a4a4a;
     --pill-bg: rgba(255, 255, 255, 0.06);
     --green-mark: #3ddc97;
     --green-band: #062e1f;
+    --diet-vegan: #5ef0ac;
+    --diet-vegan-bg: #0a3324;
+    --diet-veggie: #d4ea80;
+    --diet-veggie-bg: #2a3210;
+    --diet-meat: #ffb59a;
+    --diet-meat-bg: #3d1c11;
+    --diet-fish: #a3cbf5;
+    --diet-fish-bg: #0f2f50;
     color-scheme: dark;
   }
 }
 :root[data-theme='dark'] {
   --bg: #000000;
-  --text: #f5f5f5;
-  --text-muted: #c4c4c4;
-  --text-sub: #8f8f8f;
-  --line: #262626;
-  --border: #3a3a3a;
+  --text: #ffffff;
+  --text-muted: #d4d4d4;
+  --text-sub: #b5b5b5;
+  --line: #3a3a3a;
+  --border: #4a4a4a;
   --pill-bg: rgba(255, 255, 255, 0.06);
   --green-mark: #3ddc97;
   --green-band: #062e1f;
+  --diet-vegan: #5ef0ac;
+  --diet-vegan-bg: #0a3324;
+  --diet-veggie: #d4ea80;
+  --diet-veggie-bg: #2a3210;
+  --diet-meat: #ffb59a;
+  --diet-meat-bg: #3d1c11;
+  --diet-fish: #a3cbf5;
+  --diet-fish-bg: #0f2f50;
   color-scheme: dark;
 }
 
@@ -125,7 +149,7 @@ button { cursor: pointer; }
 }
 .when-panel .segmented { justify-self: start; }
 .day-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.day-list .chip { text-align: center; text-decoration: none; font-family: var(--font-mono); font-weight: 500; }
+.day-list .chip { text-align: center; text-decoration: none; font-variant-numeric: tabular-nums; font-weight: 500; }
 .day-list .chip[aria-current='page'] { background: var(--text); color: var(--bg); border-color: var(--text); }
 
 .segmented { display: inline-flex; background: var(--pill-bg); border: 1px solid var(--border); padding: 4px; border-radius: var(--radius-pill); flex-shrink: 0; }
@@ -160,14 +184,14 @@ button { cursor: pointer; }
 .canteens > .column { display: grid; gap: 16px; align-content: start; min-width: 0; }
 
 .canteen {
-  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-md);
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md);
   padding: 18px 18px 6px;
 }
 .canteen-head { display: flex; align-items: flex-start; gap: 8px; }
 .canteen-title { flex: 1; min-width: 0; }
 .canteen h2 { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.3; }
-.canteen-meta { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-sub); margin-top: 2px; }
-.canteen-meta a { color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.canteen-meta { font-size: 0.8rem; color: var(--text-sub); margin-top: 2px; }
+.canteen-meta a { color: inherit; text-decoration: underline; text-decoration-color: var(--border); text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .canteen-meta a:hover { color: var(--text); }
 .canteen .dishes { margin-top: 8px; }
 .status { font-size: 0.78rem; font-weight: 600; color: var(--text-sub); white-space: nowrap; padding-top: 3px; }
@@ -195,8 +219,12 @@ button { cursor: pointer; }
 .dish details > summary { list-style: none; cursor: pointer; }
 .dish details > summary::-webkit-details-marker { display: none; }
 .dish-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 10px 0; }
-.dish-row.has-photo { grid-template-columns: 56px 1fr auto; }
-.thumb { grid-row: span 2; width: 56px; height: 56px; border-radius: var(--radius-sm); object-fit: cover; background: var(--pill-bg); }
+/* The photo sits beside the text, outside the grid's rows: as a grid item it would stretch
+   the gaps between short lines. The row is at least as tall as the photo. */
+.dish-row.has-photo { grid-template-columns: 56px 1fr auto; position: relative; min-height: 76px; align-content: start; }
+.dish-name { grid-column: -3; }
+.price { grid-column: -2; }
+.thumb { position: absolute; top: 10px; left: 0; width: 56px; height: 56px; border-radius: var(--radius-sm); object-fit: cover; background: var(--pill-bg); }
 /* An opened dish shows its photo large, above the name, across the whole card. */
 .photo { display: block; grid-column: 1 / -1; width: calc(100% + 36px); max-width: none; height: auto; margin: 0 -18px 6px; background: var(--pill-bg); }
 details.expanded .thumb { display: none; }
@@ -205,31 +233,53 @@ details.expanded .dish-row.has-photo { grid-template-columns: 1fr auto; }
 .dish-name .starred-mark { display: none; }
 .dish[data-starred] .starred-mark { display: inline; }
 .dish-name, .dish-desc { min-width: 0; }
-.dish-desc { color: var(--text-sub); font-size: 0.85rem; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* An opened dish shows its whole description, over as many lines as it needs. */
-.dish details[open] .dish-desc { white-space: normal; overflow: visible; }
-.price { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 0.9rem; font-weight: 500; text-align: right; white-space: nowrap; }
+/* The description runs under the name and the diet tag under the price. A closed dish shows
+   two lines of the description, an opened one all of it. */
+.dish-desc { grid-column: -3; }
+.dish-tags { grid-column: -2; }
+.dish-desc { color: var(--text-sub); font-size: 0.85rem; line-height: 1.4;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.dish details[open] .dish-desc { display: block; overflow: visible; }
+.price { font-variant-numeric: tabular-nums; font-size: 0.95rem; font-weight: 600; text-align: right; white-space: nowrap; }
 .price small { font-size: inherit; color: var(--text-sub); }
-.dish-tags { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
-.tag { font-family: var(--font-mono); font-size: 0.7rem; background: var(--line); color: var(--text); padding: 1px 7px; border-radius: var(--radius-xs); }
+.dish-tags { display: flex; gap: 6px; align-items: flex-start; justify-content: flex-end; padding-top: 2px; }
+.dish-tags:empty { display: none; }
+/* Each diet has its own colour, so vegan and meat tell apart at a glance. */
+.tag { font-size: 0.72rem; font-weight: 600; background: var(--line); color: var(--text); padding: 1px 8px; border-radius: var(--radius-pill); }
+.dish[data-diet='vegan'] .tag { background: var(--diet-vegan-bg); color: var(--diet-vegan); }
+.dish[data-diet='vegetarian'] .tag { background: var(--diet-veggie-bg); color: var(--diet-veggie); }
+.dish[data-diet='meat'] .tag { background: var(--diet-meat-bg); color: var(--diet-meat); }
+.dish[data-diet='fish'] .tag { background: var(--diet-fish-bg); color: var(--diet-fish); }
 
 .dish-detail { padding: 0 0 12px; font-size: 0.85rem; color: var(--text-muted); display: grid; gap: 6px; }
 .dish-detail dt { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); }
-.dish-detail .prices { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-/* Nutrition on the left, the star on the right. */
-.dish-detail .actions { display: flex; gap: 8px; justify-content: space-between; align-items: center; }
+/* Four nutrition values side by side, the number above its name. */
+.macros { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; text-align: center; }
+.macros b { display: block; font-size: 0.95rem; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+.macros span { font-size: 0.72rem; color: var(--text-sub); overflow-wrap: anywhere; }
+/* "All values" on the left, the star on the right. */
+.dish-detail .actions { display: flex; gap: 8px; justify-content: space-between; align-items: center; margin-top: 4px; }
 .no-nutrition { font-size: 0.8rem; color: var(--text-sub); }
-[data-nutrition-toggle][aria-expanded='true'] { background: var(--text); color: var(--bg); border-color: var(--text); }
+.link { border: 0; background: none; padding: 4px 0; color: var(--text-muted); font-size: 0.85rem; font-weight: 600;
+  text-decoration: underline; text-decoration-color: var(--border); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.link:hover { color: var(--text); }
+.chip.small { padding: 4px 11px; font-size: 0.8rem; }
 .dish-detail [data-star] { margin-left: auto; }
 .nutrition-wrap { overflow: hidden; }
-/* "Always show nutrition" hides the button (app.js shows the table). Dishes without values keep the note. */
-.always-nutrition [data-nutrition-toggle] { display: none; }
-.nutrition { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-.nutrition th, .nutrition td { padding: 5px 0 5px 8px; border-top: 1px solid var(--line); text-align: right; vertical-align: top; font-weight: 400; }
+/* All values, listed like a food label on a soft panel. */
+.nutrition { margin-top: 4px; padding: 8px 12px; border-radius: var(--radius-sm); background: var(--pill-bg);
+  font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.nutrition > div { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; }
+.nutrition dt { color: var(--text); font-size: inherit; font-weight: 400; }
+.nutrition dd { color: var(--text); white-space: nowrap; }
+.nutrition .sub dt { padding-left: 12px; color: var(--text-sub); }
+/* The button says "All values" or "Hide values". */
+[data-nutrition-toggle][aria-expanded='true'] .when-closed,
+[data-nutrition-toggle]:not([aria-expanded='true']) .when-open { display: none; }
 .nutrition thead th, .nutrition thead td { border-top: 0; font-weight: 600; color: var(--text-sub); white-space: nowrap; }
 .nutrition tbody th { padding-left: 0; text-align: left; color: var(--text); }
 .nutrition tbody .sub th { padding-left: 12px; color: var(--text-sub); }
-.nutrition td { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text); }
+.nutrition td { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text); }
 [data-star][aria-pressed='true'] .star-off, [data-star]:not([aria-pressed='true']) .star-on { display: none; }
 
 .no-menu summary { cursor: pointer; color: var(--text-sub); font-size: 0.9rem; padding: 0 0 16px; }
@@ -243,7 +293,7 @@ html.loading #canteens, html.loading #no-menu, html.loading #no-results,
 html.loading #starred-hits, html.loading #hidden-count { display: none; }
 @media (min-width: 900px) { .skeletons { grid-template-columns: 1fr 1fr; align-items: start; } }
 .skeleton-card {
-  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-md);
+  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md);
   padding: 18px;
 }
 .sk {
@@ -301,7 +351,7 @@ dialog.sheet::backdrop { background: rgba(0, 0, 0, 0.5); }
 .wrap { display: flex; flex-wrap: wrap; gap: 8px; }
 .budget { display: flex; align-items: center; gap: 14px; }
 .budget input { flex: 1; min-width: 0; accent-color: var(--text); }
-.budget output { font-family: var(--font-mono); font-size: 0.85rem; font-variant-numeric: tabular-nums; min-width: 6.5em; text-align: right; }
+.budget output { font-size: 0.85rem; font-variant-numeric: tabular-nums; min-width: 6.5em; text-align: right; }
 .check { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; cursor: pointer; justify-self: start; }
 .check input { width: 18px; height: 18px; margin: 0; accent-color: var(--text); }
 .check:has(input:disabled) { color: var(--text-sub); cursor: default; }

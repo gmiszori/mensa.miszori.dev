@@ -15,11 +15,11 @@ database and no accounts. The code was written with AI under my direction.
 
 - **Every menu on one page.** 34 canteens from ETH Zurich and the ZFV (UZH and others), with
   real prices for students, staff and external guests.
-- **Dish details.** Tap a dish to see its photo large, its ingredients, allergens and all
-  prices. Only one dish is open at a time, centred on the screen.
-- **Nutrition values.** The Nutrition button shows energy, fat, carbohydrates, sugars, fibre,
-  protein and salt per 100 g, and for the whole portion where the canteen publishes its weight.
-  A setting shows them on every opened dish without the button.
+- **Dish details.** Tap a dish to see its photo large, its ingredients and allergens. Only one
+  dish is open at a time, centred on the screen.
+- **Nutrition values.** An opened dish shows its kcal, carbohydrates, fat and protein per 100 g,
+  and the portion's weight where the canteen publishes it. "All values" adds saturates, sugars,
+  fibre and salt.
 - **Your campuses, your diet.** Settings show only the campuses you pick, only vegetarian or
   vegan dishes, and hide dishes with the allergens you choose. Changes apply immediately.
 - **Your budget.** A slider hides dishes that cost more than you want to pay, for your price

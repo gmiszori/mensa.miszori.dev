@@ -182,9 +182,9 @@ type dishView struct {
 	Prices                       menu.Prices
 	Photo                        string
 	Order                        int // position on the source's menu
-	// Nutrition values for app.js, see nutrients; "" when the source published none.
-	Nutrition, Portion string
-	PortionGrams       string
+	// Nutrition values per 100 g for app.js, see nutrients; "" when the source published
+	// none. PortionGrams is the portion's weight, "" when unknown.
+	Nutrition, PortionGrams string
 }
 
 // buildPage decides which day and meal to show and turns the store's data into pageData.
@@ -319,8 +319,8 @@ func (s *Server) canteenView(c catalog.Canteen, day menu.Day) canteenView {
 			}
 			if n := d.Nutrition; n != nil {
 				dv.Nutrition = nutrients(n.Per100g)
-				if n.Portion != nil {
-					dv.Portion, dv.PortionGrams = nutrients(n.Portion), strconv.FormatFloat(math.Round(n.PortionGrams), 'f', -1, 64)
+				if n.PortionGrams > 0 {
+					dv.PortionGrams = strconv.FormatFloat(math.Round(n.PortionGrams), 'f', -1, 64)
 				}
 			}
 			out.Dishes = append(out.Dishes, dv)
