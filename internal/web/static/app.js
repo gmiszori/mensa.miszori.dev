@@ -488,15 +488,14 @@
   const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
   let animating = false;
 
-  // Loads the large photo; resolves true when it is there, false if it fails or is too slow.
+  // Loads and decodes the large photo; resolves true when it is ready to show, false if it
+  // fails or is too slow. Decoding first keeps it from stalling the first frames of the animation.
   function loadPhoto(details, wait) {
     const photo = details.querySelector('.photo');
     if (!photo || !details.querySelector('.thumb')) return Promise.resolve(false);
     photo.src ||= photo.dataset.src;
     return new Promise((resolve) => {
-      if (photo.complete) resolve(photo.naturalWidth > 0);
-      photo.addEventListener('load', () => resolve(true), { once: true });
-      photo.addEventListener('error', () => resolve(false), { once: true });
+      photo.decode().then(() => resolve(true), () => resolve(false));
       if (wait) setTimeout(() => resolve(false), wait);
     });
   }
@@ -508,17 +507,16 @@
   }
 
   // The large photo starts at the thumbnail's place and size and grows into its own.
+  // Only the transform is animated, so the browser can run it off the main thread, which is
+  // busy changing the dish's height and scrolling (rounded corners would keep it there).
   function growPhoto(details, from) {
     const photo = details.querySelector('.photo');
     if (!photo || !from || reduceMotion.matches) return;
     const to = photo.getBoundingClientRect();
+    photo.style.transformOrigin = 'top left';
     photo.animate([
-      {
-        transformOrigin: 'top left',
-        transform: `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width}, ${from.height / to.height})`,
-        borderRadius: '12px',
-      },
-      { transformOrigin: 'top left', transform: 'none' },
+      { transform: `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width}, ${from.height / to.height})` },
+      { transform: 'none' },
     ], { duration: DURATION, easing: 'cubic-bezier(0.65, 0, 0.35, 1)' });
   }
 
