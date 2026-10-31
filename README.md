@@ -126,9 +126,8 @@ Browser ─► proxy ─► Caddy (HTTPS) ─► Mensaplan Zürich ◄───�
 Routes: `/` is the page (`?day=YYYY-MM-DD&meal=lunch|dinner`).
 `/photos/<key>.jpg` and `/photos/<key>-large.jpg` serve photos. `/healthz` answers while the
 server runs (Docker's health check uses it), shows the running version and lists sources that haven't refreshed for 6 hours
-as `stale`. Caddy keeps it inside the Docker network; to see it on the server, run
-`docker compose exec mensaplan /mensaplan healthcheck`. An outside uptime monitor watches the
-home page.
+as `stale`. It is public, so an outside uptime monitor can watch it too, and alert when it
+doesn't contain `"stale": []`.
 
 ## Deploying
 
