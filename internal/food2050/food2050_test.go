@@ -97,3 +97,19 @@ func keys[V any](m map[string]V) []string {
 	}
 	return out
 }
+
+// Dishes the source flags neither vegan nor vegetarian are meat, unless their text says
+// otherwise: then they get no tag.
+func TestUnflaggedDiet(t *testing.T) {
+	for _, c := range []struct{ name, description, diet string }{
+		{"HACKBÄLLCHEN Vegane", "Pilz-Erbsen-Risotto, Rucola, Parmesan", ""},
+		{"Butter Tofu", "Cashew Tomaten, Jasminreis", ""},
+		{"Pasta", "Jeden Tag eine neue Kreation, Vegetarisch oder mit Fleisch", ""},
+		{"Rindsgeschnetzeltes", "Rösti, Rahmsauce", "meat"},
+	} {
+		d, _ := (&dish{Name: c.name, Description: c.description}).toDish()
+		if d.Diet != c.diet {
+			t.Errorf("%s: diet %q, want %q", c.name, d.Diet, c.diet)
+		}
+	}
+}

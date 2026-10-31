@@ -17,6 +17,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -215,6 +216,9 @@ func (s *stats) nutrition() *menu.Nutrition {
 	return n
 }
 
+// meatless matches words that suggest a dish has no meat, in English and German.
+var meatless = regexp.MustCompile(`(?i)vegan|vegi|veggie|vegetar|tofu|seitan|tempeh`)
+
 func (d *dish) toDish() (menu.Dish, bool) {
 	name := menu.TidyName(d.Name)
 	if name == "" {
@@ -234,6 +238,10 @@ func (d *dish) toDish() (menu.Dish, bool) {
 		out.Diet = "vegan"
 	case d.IsVegetarian:
 		out.Diet = "vegetarian"
+	case meatless.MatchString(name + " " + d.Description):
+		// The source doesn't flag every vegetarian dish ("Vegane Hackbällchen", "Butter
+		// Tofu"). Calling those meat would be wrong, and the words alone don't say which of
+		// vegan or vegetarian, so the dish gets no tag.
 	default:
 		// Not vegetarian means meat or fish; the fish allergen tells them apart.
 		out.Diet = "meat"
