@@ -12,6 +12,10 @@
   <link rel="icon" href="/static/icon-32.png" type="image/png" sizes="32x32">
   <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+  <!-- Added to a home screen, the site opens full screen, named "Mensaplan" (see the install
+       sheet below). -->
+  <link rel="manifest" href="/static/manifest.json?v={{.Version}}">
+  <meta name="apple-mobile-web-app-title" content="Mensaplan">
   <!-- How the link looks when shared in a message or post (Open Graph, also read by
        iMessage, WhatsApp, Slack, Telegram, ...). -->
   <meta property="og:type" content="website">
@@ -36,6 +40,11 @@
   <symbol id="i-settings" viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></symbol>
   <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></symbol>
+  <symbol id="i-plus-square" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="i-menu-dots" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
 </svg>
 
 <div class="container">
@@ -178,6 +187,14 @@
     <h2>{{call .B "settings"}}</h2>
     <button class="icon-btn" type="button" id="close-settings" aria-label="{{call .T "close"}}" data-i18n="aria-label:close"><svg><use href="#i-x"/></svg></button>
   </div>
+  <!-- Shown on phones and tablets, unless the site already runs from the home screen. -->
+  <div class="setting" id="app-setting" hidden>
+    <div class="setting-head">
+      <h3>{{call .B "setApp"}}</h3>
+      <button class="chip" type="button" id="app-install"><span data-guide>{{call .B "showHow"}}</span><span data-prompt hidden>{{call .B "install"}}</span></button>
+    </div>
+    <p>{{call .B "setAppHelp"}}</p>
+  </div>
   <div class="setting">
     <div class="setting-head">
       <h3>{{call .B "setPrices"}}</h3>
@@ -268,6 +285,25 @@
       </div>
     </div>
   </div>
+</dialog>
+
+<!-- How to add the site to the home screen, opened from the settings. app.js shows the steps
+     for the visitor's system. -->
+<dialog class="sheet" id="install" aria-labelledby="install-title">
+  <div class="sheet-head">
+    <h2 id="install-title">{{call .B "appTitle"}}</h2>
+    <button class="icon-btn" type="button" id="close-install" aria-label="{{call .T "close"}}" data-i18n="aria-label:close"><svg><use href="#i-x"/></svg></button>
+  </div>
+  <ol class="steps" data-os="ios">
+    <li><svg><use href="#i-share"/></svg><span>{{call .B "iosStep1"}}</span></li>
+    <li><svg><use href="#i-plus-square"/></svg><span>{{call .B "iosStep2"}}</span></li>
+    <li><svg><use href="#i-check"/></svg><span>{{call .B "iosStep3"}}</span></li>
+  </ol>
+  <ol class="steps" data-os="android" hidden>
+    <li><svg><use href="#i-menu-dots"/></svg><span>{{call .B "androidStep1"}}</span></li>
+    <li><svg><use href="#i-download"/></svg><span>{{call .B "androidStep2"}}</span></li>
+    <li><svg><use href="#i-check"/></svg><span>{{call .B "androidStep3"}}</span></li>
+  </ol>
 </dialog>
 </body>
 </html>

@@ -782,9 +782,9 @@
   const dialog = document.getElementById('settings');
   const sheetIsCentred = window.matchMedia('(min-width: 700px)'); // see dialog.sheet in app.css
 
-  // On phones the sheet slides up from the bottom; on wide screens it fades and grows in the
+  // On phones a sheet slides up from the bottom; on wide screens it fades and grows in the
   // middle. Closing plays the same backwards.
-  function animateSheet(opening) {
+  function animateSheet(sheet, opening) {
     const hidden = sheetIsCentred.matches
       ? { opacity: 0, transform: 'scale(0.96)' }
       : { transform: 'translateY(100%)' };
@@ -793,36 +793,41 @@
     const frames = opening ? [hidden, shown] : [shown, hidden];
     const fade = opening ? [{ opacity: 0 }, { opacity: 1 }] : [{ opacity: 1 }, { opacity: 0 }];
     const animations = [
-      dialog.animate(frames, options),
-      dialog.animate(fade, { ...options, pseudoElement: '::backdrop' }),
+      sheet.animate(frames, options),
+      sheet.animate(fade, { ...options, pseudoElement: '::backdrop' }),
     ];
     // Resolves when both are done, then removes them so they don't hold their end state.
     return Promise.all(animations.map((a) => a.finished)).then(() => animations);
   }
 
-  function openSettings() {
-    dialog.showModal();
+  function openSheet(sheet) {
+    sheet.showModal();
     if (reduceMotion.matches) return;
-    animateSheet(true).then((animations) => animations.forEach((a) => a.cancel()));
+    animateSheet(sheet, true).then((animations) => animations.forEach((a) => a.cancel()));
   }
 
-  let closingSheet = false;
-  async function closeSettings() {
-    if (closingSheet || !dialog.open) return;
-    closingSheet = true;
-    const animations = reduceMotion.matches ? [] : await animateSheet(false);
-    dialog.close();
+  const closingSheets = new Set();
+  async function closeSheet(sheet) {
+    if (closingSheets.has(sheet) || !sheet.open) return;
+    closingSheets.add(sheet);
+    const animations = reduceMotion.matches ? [] : await animateSheet(sheet, false);
+    sheet.close();
     animations.forEach((a) => a.cancel());
-    closingSheet = false;
+    closingSheets.delete(sheet);
   }
 
-  document.getElementById('open-settings').addEventListener('click', openSettings);
-  document.getElementById('close-settings').addEventListener('click', closeSettings);
-  // Escape closes the sheet with the same animation.
-  dialog.addEventListener('cancel', (e) => {
-    e.preventDefault();
-    closeSettings();
-  });
+  // A sheet's close button and Escape close it with the same animation.
+  function closesSheet(sheet, button) {
+    button.addEventListener('click', () => closeSheet(sheet));
+    sheet.addEventListener('cancel', (e) => {
+      e.preventDefault();
+      closeSheet(sheet);
+    });
+  }
+
+  document.getElementById('open-settings').addEventListener('click', () => openSheet(dialog));
+  closesSheet(dialog, document.getElementById('close-settings'));
+
   function showPrices() {
     const group = priceGroup();
     for (const dish of document.querySelectorAll('.dish')) {
@@ -1055,6 +1060,49 @@
     if (!checkSaved()) saveNextDays();
   }
 
+  // ---------- using the site as an app ----------
+  //
+  // On phones and tablets the settings offer to add the site to the home screen, from where
+  // it opens full screen (see manifest.json). Chrome on Android can do that itself: it offers
+  // it with the beforeinstallprompt event, and the button then opens Chrome's own dialog.
+  // Everywhere else the button opens a sheet that shows how. Once the site runs from the home
+  // screen, the entry is gone.
+
+  const appSetting = document.getElementById('app-setting');
+  const installSheet = document.getElementById('install');
+  // iPads report themselves as Macs, but Macs have no touch screen.
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isAndroid = /Android/.test(navigator.userAgent);
+  const runsAsApp = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  let installPrompt = null;
+
+  function showAppSetting() {
+    appSetting.hidden = runsAsApp || !(isIOS || isAndroid);
+    appSetting.querySelector('[data-guide]').hidden = installPrompt !== null;
+    appSetting.querySelector('[data-prompt]').hidden = installPrompt === null;
+  }
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault(); // no install banner of Chrome's own: the settings offer it
+    installPrompt = e;
+    showAppSetting();
+  });
+  window.addEventListener('appinstalled', () => { appSetting.hidden = true; });
+
+  document.getElementById('app-install').addEventListener('click', () => {
+    if (installPrompt) {
+      installPrompt.prompt();
+      installPrompt = null; // usable once; Chrome sends a new one if the visitor said no
+      showAppSetting();
+      return;
+    }
+    for (const steps of installSheet.querySelectorAll('[data-os]')) {
+      steps.hidden = steps.dataset.os !== (isIOS ? 'ios' : 'android');
+    }
+    openSheet(installSheet);
+  });
+  closesSheet(installSheet, document.getElementById('close-install'));
+
   // ---------- start ----------
   //
   // Apply the saved settings while the placeholder cards are showing, then swap them for the
@@ -1063,6 +1111,7 @@
   showLanguage();
   showPrices();
   showSettingsSheet();
+  showAppSetting();
   showMealLabel();
   for (const card of cards) {
     card.querySelector('[data-favourite]').setAttribute('aria-pressed', String(settings.fav.includes(card.dataset.id)));

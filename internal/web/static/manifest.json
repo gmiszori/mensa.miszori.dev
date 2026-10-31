@@ -1,0 +1,16 @@
+{
+  "id": "/",
+  "name": "Mensaplan Zürich",
+  "short_name": "Mensaplan",
+  "description": "The menus of ETH and UZH canteens in Zurich on one page.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    { "src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/static/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
