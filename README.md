@@ -199,7 +199,8 @@ with a local certificate.
 ## Security
 
 - **Strict content security policy.** The page loads scripts, styles, fonts and images only from
-  its own origin. This blocks injected scripts and third-party tracking.
+  its own origin, plus the script of Cloudflare Web Analytics (cookieless page-view counts). This
+  blocks injected scripts and any other third-party code.
 - **Escaped output.** Menu texts come from other websites and are always HTML-escaped by Go's
   templates, so a dish name can't inject markup.
 - **No cookies, no settings on the server.** The page is the same for everyone; the language and

@@ -404,10 +404,11 @@ func cacheStatic(h http.Handler) http.Handler {
 }
 
 // securityHeaders adds standard protective headers to every response. The page loads
-// nothing from other sites, so the content security policy can be strict.
+// nothing from other sites except Cloudflare Web Analytics, so the content security policy
+// can be strict.
 func securityHeaders(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; base-uri 'none'; frame-ancestors 'none'")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		w.Header().Set("Permissions-Policy", "geolocation=(self), camera=(), microphone=()") // location: sorting by distance
