@@ -38,7 +38,7 @@ services:
   caddy:
     # Pinned by digest, so an update is a deliberate change here. To update, change the tag
     # and digest (docker buildx imagetools inspect caddy:<version>-alpine).
-    image: caddy:2.11.7-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f
+    image: caddy:2.11.8-alpine@sha256:3db3a09e418f86a8fce8de4bc0026fccd2b4cd925aef00cc7d843d9fdc75e442
     user: "1000:1000"
     read_only: true
     tmpfs: [/tmp]
