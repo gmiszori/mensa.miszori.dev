@@ -11,7 +11,8 @@
 #
 # Both containers run as unprivileged users on a read-only filesystem, without Linux
 # capabilities (Caddy keeps only the one to listen on ports 80 and 443), and can't gain
-# privileges. Caddy runs as user 1000, so its volumes must belong to that user, once:
+# privileges. Memory, process and open-file limits keep either of them from starving the other
+# sites on the server. Caddy runs as user 1000, so its volumes must belong to that user, once:
 #
 #   docker compose run --rm --no-deps --user root --cap-add CHOWN --entrypoint chown caddy -R 1000:1000 /data /config
 services:
@@ -26,6 +27,10 @@ services:
     security_opt: [no-new-privileges:true]
     restart: unless-stopped
     mem_limit: 512m # resizing photos is the biggest user; normal use is far below
+    pids_limit: 100
+    ulimits: &ulimits
+      core: 0 # a crash leaves no copy of its memory on disk
+      nofile: { soft: 2048, hard: 2048 }
     logging: &logging
       driver: json-file
       options: { max-size: 10m, max-file: "3" } # keep logs from filling the disk
@@ -61,6 +66,8 @@ services:
         condition: service_healthy
     restart: unless-stopped
     mem_limit: 256m
+    pids_limit: 100
+    ulimits: *ulimits
     logging: *logging
 
 volumes:
