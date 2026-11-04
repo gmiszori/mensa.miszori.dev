@@ -113,3 +113,21 @@ func TestUnflaggedDiet(t *testing.T) {
 		}
 	}
 }
+
+// A text row's announced length comes from the source's page, so a wrong one must end parsing
+// instead of moving outside the text.
+func TestTextRowLength(t *testing.T) {
+	d := parseRows("a:T3,abc1:{\"x\":1}\n")
+	if _, ok := d.rows["1"]; !ok {
+		t.Errorf("row after a text row not parsed: %v", d.rows)
+	}
+	for _, text := range []string{
+		"a:T10,xxx\n",                 // past the end
+		"a:T7fffffffffffffff,xxx\n",   // would overflow the position
+		"a:Tffffffffffffffffff,xxx\n", // too big to read
+	} {
+		if d := parseRows(text); len(d.rows) != 0 {
+			t.Errorf("%q: rows %v, want none", text, d.rows)
+		}
+	}
+}

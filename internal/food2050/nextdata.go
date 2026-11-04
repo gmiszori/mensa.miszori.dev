@@ -65,8 +65,14 @@ func parseRows(text string) *nextData {
 		// Text row: skip exactly the announced number of bytes.
 		if strings.HasPrefix(text[i:], "T") {
 			if comma := strings.IndexByte(text[i:], ','); comma > 1 && isHex(text[i+1:i+comma]) {
-				n, _ := strconv.ParseInt(text[i+1:i+comma], 16, 64)
-				i = min(len(text), i+comma+1+int(n))
+				start := i + comma + 1
+				n, err := strconv.ParseInt(text[i+1:i+comma], 16, 0)
+				// A length too big to read or past the end leaves nothing more to parse.
+				if err != nil || int(n) > len(text)-start {
+					i = len(text)
+					continue
+				}
+				i = start + int(n)
 				continue
 			}
 		}
