@@ -12,9 +12,9 @@
 # Both containers run as unprivileged users on a read-only filesystem, without Linux
 # capabilities (Caddy keeps only the one to listen on ports 80 and 443), and can't gain
 # privileges. Memory, process and open-file limits keep either of them from starving the other
-# sites on the server. Caddy runs as user 1000, so its volumes must belong to that user, once:
+# sites on the server. Caddy runs as user 10003, so its volumes must belong to that user, once:
 #
-#   docker compose run --rm --no-deps --user root --cap-add CHOWN --entrypoint chown caddy -R 1000:1000 /data /config
+#   docker compose run --rm --no-deps --user root --cap-add CHOWN --cap-add DAC_READ_SEARCH --entrypoint chown caddy -R 10003:10003 /data /config
 services:
   mensaplan:
     build: .
@@ -44,7 +44,7 @@ services:
     # Pinned by digest, so an update is a deliberate change here. To update, change the tag
     # and digest (docker buildx imagetools inspect caddy:<version>-alpine).
     image: caddy:2.11.8-alpine@sha256:3db3a09e418f86a8fce8de4bc0026fccd2b4cd925aef00cc7d843d9fdc75e442
-    user: "1000:1000"
+    user: "10003:10003"
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]

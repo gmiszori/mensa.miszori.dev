@@ -144,10 +144,10 @@ except through the proxy.
    ```bash
    git clone https://github.com/gmiszori/mensa.miszori.dev && cd mensa.miszori.dev
    cp .env.example .env   # set DOMAIN
-   docker compose run --rm --no-deps --user root --cap-add CHOWN --entrypoint chown caddy -R 1000:1000 /data /config
+   docker compose run --rm --no-deps --user root --cap-add CHOWN --cap-add DAC_READ_SEARCH --entrypoint chown caddy -R 10003:10003 /data /config
    docker compose up --build -d
    ```
-   The second command runs once: Caddy runs as user 1000 and needs its certificate volumes to
+   The second command runs once: Caddy runs as user 10003 and needs its certificate volumes to
    belong to it. Servers set up before this change need it once too.
 
 To update, pull the new code and run `docker compose up --build -d` again. Menus and photos live
