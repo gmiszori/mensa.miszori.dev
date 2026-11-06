@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"image"
 	"image/jpeg"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -99,6 +100,19 @@ func TestTooLarge(t *testing.T) {
 	}
 }
 
+func TestLargeCameraPhoto(t *testing.T) {
+	// 6000x3375 (20 megapixels), the size of a photo a canteen uploaded from its camera.
+	source := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = jpeg.Encode(w, image.NewGray(image.Rect(0, 0, 6000, 3375)), nil)
+	}))
+	defer source.Close()
+	h := &Handler{Dir: t.TempDir(), HTTP: source.Client(), Allowed: []string{source.URL},
+		Lookup: func(string) (string, bool) { return source.URL, true }}
+	if err := h.fetchOnce(source.URL, "aa"); err != nil {
+		t.Errorf("a 20 megapixel photo was refused: %v", err)
+	}
+}
+
 func TestOneDownloadPerPhoto(t *testing.T) {
 	var downloads atomic.Int32
 	source := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -183,8 +197,10 @@ func TestFailedPhotoWaits(t *testing.T) {
 		http.Error(w, "down", http.StatusInternalServerError)
 	}))
 	defer source.Close()
+	var logged bytes.Buffer
 	h := &Handler{Dir: t.TempDir(), HTTP: source.Client(), Allowed: []string{source.URL},
-		Lookup: func(string) (string, bool) { return source.URL, true }}
+		Lookup: func(string) (string, bool) { return source.URL, true },
+		Log:    slog.New(slog.NewTextHandler(&logged, nil))}
 	for range 3 {
 		if err := h.fetchOnce(source.URL, "aa"); err == nil {
 			t.Fatal("a failing download succeeded")
@@ -192,5 +208,11 @@ func TestFailedPhotoWaits(t *testing.T) {
 	}
 	if asked != 1 {
 		t.Errorf("the source was asked %d times within retryAfter, want 1", asked)
+	}
+	if n := strings.Count(logged.String(), "photo download failed"); n != 1 {
+		t.Errorf("the failure was logged %d times, want 1:\n%s", n, &logged)
+	}
+	if !strings.Contains(logged.String(), "500 Internal Server Error") {
+		t.Errorf("the log doesn't say why the download failed:\n%s", &logged)
 	}
 }

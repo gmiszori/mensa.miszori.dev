@@ -18,6 +18,7 @@ import (
 	"image/jpeg"
 	_ "image/png" // sources may send PNG or WebP instead of JPEG
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -44,10 +45,11 @@ const LargeWidth = 1080
 const minSide = 350
 
 // Limits for what a source may send. Decoding needs about 4 bytes per pixel, so a huge image
-// could use gigabytes of memory; real photos are 2-3 megapixels and well under 1 MB.
+// could use gigabytes of memory. Most real photos are 2-3 megapixels, but canteens also upload
+// straight from phones, tablets and cameras: 12 to 20 megapixels and a few MB have been seen.
 const (
 	maxBytes  = 15 << 20   // 15 MB
-	maxPixels = 12_000_000 // e.g. 4000 x 3000
+	maxPixels = 24_000_000 // e.g. 6000 x 4000
 )
 
 // retryAfter is how long a photo whose download failed is not tried again: every request for
@@ -75,6 +77,7 @@ type Handler struct {
 	// LogoSources lists the URL prefixes whose small images are logos rather than photos
 	// (see minSide). Images from other sources are shown whatever their size.
 	LogoSources []string
+	Log         *slog.Logger // optional: gets the reason of each failed download
 
 	mu       sync.Mutex
 	inFlight map[string]*download // photos being downloaded right now, by key
@@ -153,9 +156,10 @@ func (h *Handler) fetchOnce(url, key string) error {
 		<-slots
 	}
 
+	failed := d.err != nil && !errors.Is(d.err, errNotAPhoto)
 	h.mu.Lock()
 	delete(h.inFlight, key)
-	if d.err != nil && !errors.Is(d.err, errNotAPhoto) {
+	if failed {
 		if h.failed == nil {
 			h.failed = map[string]time.Time{}
 		}
@@ -165,6 +169,11 @@ func (h *Handler) fetchOnce(url, key string) error {
 	}
 	h.mu.Unlock()
 	close(d.done)
+	// Logged here, once per download: the requests waiting for it and those turned away until
+	// retryAfter has passed would only repeat it.
+	if failed && h.Log != nil {
+		h.Log.Error("photo download failed", "key", key, "url", url, "err", d.err)
+	}
 	return d.err
 }
 

@@ -211,7 +211,7 @@ with a local certificate.
   downloaded only from ETH's and FOOD2050's image addresses, redirects included, so a broken
   or hostile source can't make the server call other addresses. A failed download is retried
   after 5 minutes at the earliest.
-- **Size limits on photos.** A source's image may be at most 15 MB and 12 megapixels. Its size is
+- **Size limits on photos.** A source's image may be at most 15 MB and 24 megapixels. Its size is
   checked before decoding, so one oversized image can't exhaust the memory. At most four photos
   are downloaded at a time, and each only once.
 - **No accounts, no personal data.** Nothing on the server can be changed from outside:
