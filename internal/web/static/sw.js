@@ -1,18 +1,18 @@
-// The service worker: keeps the menus of the next three days with menus in this browser, so the
-// site opens and works without a connection (on a train, in a basement canteen).
+// The service worker: keeps the menus of every day the site offers (up to ten) in this browser,
+// so the site opens and works without a connection (on a train, in a basement canteen).
 //
-// While online, app.js sends it the next three days with menus, and it saves, in this order:
-//   1. the three pages and the CSS, JavaScript and fonts (a few hundred KB, a second or two),
-//   2. the small photos (about 1 MB a day),
-//   3. the large photos, one at a time and at low priority.
-// Whenever the visitor opens a dish, saving pauses for a moment, so its photo has the
-// connection to itself and the dish opens smoothly.
+// While online, app.js sends it the days the picker offers, and it saves, in this order:
+//   1. the pages and the CSS, JavaScript and fonts (a few hundred KB, a second or two),
+//   2. the small photos (about 8 KB each, a few MB in all),
+//   3. the large photos (about 120 KB each, some 40 MB in all), one at a time and at low priority.
+// Each step goes from the closest day to the latest. Whenever the visitor opens a dish, saving
+// pauses for a moment, so its photo has the connection to itself and the dish opens smoothly.
 // Phones stop service workers soon after the browser goes to the background, so the important
 // parts come first; whatever was missed is fetched on the next visit. Pages are fetched again
-// at most once an hour.
+// at most once an hour; photos never change, so only new ones are fetched.
 //
 // Pages live in one cache, photos in another. A photo is kept as long as a saved page shows it,
-// so a day's photos go once the day has passed or is no longer one of the next three.
+// so a day's photos go once the day has passed or the site no longer offers it.
 //
 // A saved page opens at once, without waiting for the network. app.js then asks this worker to
 // fetch the page again (refreshPage); until that succeeds, it treats the visitor as offline, and if
@@ -64,12 +64,13 @@ self.addEventListener('message', (e) => {
   const days = e.data?.save;
   if (!Array.isArray(days) || !days.every(isDay)) return;
   const version = /^[0-9a-f]+$/.test(e.data.version) ? e.data.version : undefined;
-  saving = saving.then(() => save(days.slice(0, 3), version)).catch(() => { /* offline or flaky: next time */ });
+  saving = saving.then(() => save([...days].sort(), version)).catch(() => { /* offline or flaky: next time */ });
   e.waitUntil(saving);
 });
 
-// save saves the pages of days, then their photos. version is that of the static files of the
-// page asking, which is current: it came from the server or was just checked against it.
+// save saves the pages of days, then their photos, each from the first day to the last. version
+// is that of the static files of the page asking, which is current: it came from the server or
+// was just checked against it.
 async function save(days, version) {
   const pages = await caches.open(PAGES);
   for (const day of days) await savePage(pages, day);
@@ -209,12 +210,13 @@ async function removePages(keep) {
 }
 
 // prunePhotos deletes the photos no saved page shows any more. It returns the photo cache, the
-// photos the saved pages show, and those that were in the cache.
+// photos the saved pages show (by day, the earliest first), and those that were in the cache.
 async function prunePhotos() {
   const pages = await caches.open(PAGES);
   const wanted = new Set();
-  for (const request of await pages.keys()) {
-    for (const url of photosOn(await (await pages.match(request)).text())) wanted.add(url);
+  for (const day of await savedDays()) {
+    const page = await pages.match(pageURL(day));
+    if (page) for (const url of photosOn(await page.text())) wanted.add(url);
   }
   const photos = await caches.open(PHOTOS);
   const have = new Set((await photos.keys()).map((r) => r.url));

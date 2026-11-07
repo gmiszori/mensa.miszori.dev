@@ -56,7 +56,7 @@ app to install.
 ² Only if you ask for it.\
 ³ Only on UZH's menu pages, one canteen at a time.\
 ⁴ Only on UZH's menu pages, one canteen at a time, and only gluten and lactose.\
-⁵ The next three days with menus are saved.\
+⁵ Every day it offers (up to ten) is saved, photos included.\
 ⁶ A language model can skip or misread a dish.\
 ⁷ It needs a Claude account.
 

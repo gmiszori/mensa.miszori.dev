@@ -9,7 +9,7 @@
 //      settings) by hiding elements,
 //   3. opens one dish at a time, animated, centred on screen, with its photo large,
 //   4. applies settings the moment they change and saves them,
-//   5. lets sw.js keep the next three days with menus for use offline.
+//   5. lets sw.js keep every day the picker offers for use offline.
 (() => {
   'use strict';
 
@@ -945,7 +945,7 @@
 
   // ---------- saved pages and offline ----------
   //
-  // While online, sw.js is told the next three days with menus and saves them (at most once an
+  // While online, sw.js is told every day the picker offers and saves them (at most once an
   // hour). It then shows a saved page at once, marked with data-saved (the time it was saved)
   // and data-saved-days. Until the server answers, the visitor counts as offline: the picker
   // offers only the saved days, so no tap leads to a day that can't be shown. The notice saying
@@ -990,7 +990,7 @@
       offlineNotice.hidden = true;
       for (const link of dayLinks) link.hidden = false;
       if (!answer.changed) {
-        saveNextDays();
+        saveDays();
         return;
       }
       try { sessionStorage.setItem(CHECKED, String(answer.saved)); } catch { /* checked again after the reload */ }
@@ -1044,9 +1044,9 @@
     offlineNotice.after(el);
   }
 
-  function saveNextDays() {
+  function saveDays() {
     const today = zurichDate();
-    const days = dayLinks.map(dayOf).filter((day) => day >= today).slice(0, 3);
+    const days = dayLinks.map(dayOf).filter((day) => day >= today);
     const version = new URL(document.querySelector('script[src*="/static/app.js"]').src).searchParams.get('v');
     navigator.serviceWorker.ready.then((registration) => registration.active?.postMessage({ save: days, version }));
   }
@@ -1054,8 +1054,8 @@
   function keepOffline() {
     if (!('serviceWorker' in navigator)) return;
     navigator.serviceWorker.register('/sw.js').catch(() => { /* no offline copies, nothing else changes */ });
-    // A saved page saves the next days once the check finds the server (see checkSaved).
-    if (!checkSaved()) saveNextDays();
+    // A saved page saves the days once the check finds the server (see checkSaved).
+    if (!checkSaved()) saveDays();
   }
 
   // ---------- using the site as an app ----------
