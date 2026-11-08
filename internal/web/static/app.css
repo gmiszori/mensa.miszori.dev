@@ -207,8 +207,13 @@ button { cursor: pointer; }
 .dishes { list-style: none; }
 .dish { border-top: 1px solid var(--line); }
 .dish:first-child { border-top: 0; }
-/* A starred dish sits on a green band across the whole card. */
-.dish[data-starred] { margin: 0 -18px; padding: 0 18px; background: var(--green-band); }
+/* A starred dish's green band and an opened dish's photo reach past the text by --bleed: on
+   phones exactly to the screen's edges (the page's side margin), on wide screens a little into
+   the margin and the gap between the columns. Any more would let the page move sideways. */
+.canteen { --bleed: 16px; }
+@media (min-width: 900px) { .canteen { --bleed: 12px; } }
+/* A starred dish sits on a green band. */
+.dish[data-starred] { margin: 0 calc(-1 * var(--bleed)); padding: 0 var(--bleed); background: var(--green-band); }
 .dish.after-starred, .dish[data-starred] { border-top-color: transparent; }
 /* Off-budget dishes, when the visitor chose to see them below the others. */
 .over-budget { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); padding: 14px 0 4px;
@@ -224,8 +229,9 @@ button { cursor: pointer; }
 .dish-name { grid-column: -3; }
 .price { grid-column: -2; }
 .thumb { position: absolute; top: 10px; left: 0; width: 56px; height: 56px; border-radius: var(--radius-sm); object-fit: cover; background: var(--pill-bg); }
-/* An opened dish shows its photo large, above the name, across the whole card. */
-.photo { display: block; grid-column: 1 / -1; width: calc(100% + 36px); max-width: none; height: auto; margin: 0 -18px 6px; background: var(--pill-bg); }
+/* An opened dish shows its photo large, above the name. */
+.photo { display: block; grid-column: 1 / -1; width: calc(100% + 2 * var(--bleed)); max-width: none; height: auto;
+  margin: 0 calc(-1 * var(--bleed)) 6px; background: var(--pill-bg); }
 details.expanded .thumb { display: none; }
 details.expanded .dish-row.has-photo { grid-template-columns: 1fr auto; }
 .dish-name { font-weight: 600; line-height: 1.35; }
