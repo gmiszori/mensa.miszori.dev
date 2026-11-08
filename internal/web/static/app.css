@@ -321,6 +321,8 @@ html.loading #starred-hits, html.loading #hidden-count { display: none; }
 .endorse { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; white-space: nowrap; }
 .endorse a { color: var(--text); font-weight: 600; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .endorse a:hover { text-decoration-thickness: 2px; }
+.privacy { color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.privacy:hover { color: var(--text); }
 /* The GM tile is drawn from miszori.dev's favicon.svg, so its letters sit exactly in the middle. */
 .gm-tile { display: block; width: 20px; height: 20px; }
 .gm-tile .gm-bg { fill: var(--text); }
