@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"image/color"
 	"image/jpeg"
 	_ "image/png" // sources may send PNG or WebP instead of JPEG
 	"io"
@@ -56,9 +57,16 @@ const (
 // it would otherwise start a new download from a source that is failing.
 const retryAfter = 5 * time.Minute
 
-// maxDownloads is how many photos are downloaded and resized at the same time. The first
-// visit to a page asks for dozens of photos at once; the rest wait their turn.
+// maxDownloads is how many photos are downloaded at the same time. The first visit to a page
+// asks for dozens of photos at once; the rest wait their turn.
 const maxDownloads = 4
+
+// maxResizing is how many pixels may be decoded and resized at the same time: two of the
+// largest photos allowed, or three 12 megapixel phone photos. Without it, four of the largest
+// at once used up to 1.85 GB, over the container's memory limit; with it, 12 photos asked for
+// at once peaked at about 0.75 GB (24 megapixels) and 1.2 GB (12 megapixels, which need more
+// memory per pixel when tall).
+const maxResizing = 2 * maxPixels
 
 var (
 	errNotAPhoto      = errors.New("image is a placeholder, not a photo")
@@ -83,6 +91,47 @@ type Handler struct {
 	inFlight map[string]*download // photos being downloaded right now, by key
 	failed   map[string]time.Time // when a photo's last download failed, by key
 	slots    chan struct{}        // one per running download, at most maxDownloads
+	resizing *budget              // pixels being resized, at most maxResizing
+}
+
+// budget hands out a limited amount (here: pixels) in the order it was asked for, so a large
+// photo waiting for room is not overtaken by small ones again and again.
+type budget struct {
+	mu      sync.Mutex
+	free    int
+	waiting []*waiter
+}
+
+type waiter struct {
+	n     int
+	ready chan struct{}
+}
+
+// take waits until n is free and takes it. n must not be more than the whole budget.
+func (b *budget) take(n int) {
+	b.mu.Lock()
+	if len(b.waiting) == 0 && n <= b.free {
+		b.free -= n
+		b.mu.Unlock()
+		return
+	}
+	w := &waiter{n: n, ready: make(chan struct{})}
+	b.waiting = append(b.waiting, w)
+	b.mu.Unlock()
+	<-w.ready
+}
+
+// give returns n, and lets the waiters through that now fit, first come first served.
+func (b *budget) give(n int) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.free += n
+	for len(b.waiting) > 0 && b.waiting[0].n <= b.free {
+		w := b.waiting[0]
+		b.waiting = b.waiting[1:]
+		b.free -= w.n
+		close(w.ready)
+	}
 }
 
 // download is one photo being fetched; requests for the same photo wait for it instead of
@@ -134,6 +183,7 @@ func (h *Handler) fetchOnce(url, key string) error {
 	if h.inFlight == nil {
 		h.inFlight = map[string]*download{}
 		h.slots = make(chan struct{}, maxDownloads)
+		h.resizing = &budget{free: maxResizing}
 	}
 	if d, ok := h.inFlight[key]; ok {
 		h.mu.Unlock()
@@ -223,9 +273,19 @@ func (h *Handler) fetch(url, key string) error {
 	if err != nil {
 		return fmt.Errorf("photo %s: %w", url, err)
 	}
-	if config.Width*config.Height > maxPixels {
+	pixels := config.Width * config.Height
+	if pixels > maxPixels {
 		return fmt.Errorf("photo %s: %dx%d is too large", url, config.Width, config.Height)
 	}
+	// Wait until there is room to decode and resize it (see maxResizing). A 16-bit image takes
+	// twice the memory once decoded, so it counts double: at 24 megapixels it is resized alone.
+	weight := pixels
+	switch config.ColorModel {
+	case color.RGBA64Model, color.NRGBA64Model, color.Gray16Model:
+		weight *= 2
+	}
+	h.resizing.take(weight)
+	defer h.resizing.give(weight)
 	src, _, err := image.Decode(bytes.NewReader(raw))
 	if err != nil {
 		return fmt.Errorf("photo %s: %w", url, err)

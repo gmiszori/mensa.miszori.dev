@@ -13,6 +13,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func TestHandler(t *testing.T) {
@@ -214,5 +215,45 @@ func TestFailedPhotoWaits(t *testing.T) {
 	}
 	if !strings.Contains(logged.String(), "500 Internal Server Error") {
 		t.Errorf("the log doesn't say why the download failed:\n%s", &logged)
+	}
+}
+
+func TestBudget(t *testing.T) {
+	b := &budget{free: 10}
+	queued := func(n int) { // waits until n requests are waiting
+		for {
+			b.mu.Lock()
+			waiting := len(b.waiting)
+			b.mu.Unlock()
+			if waiting == n {
+				return
+			}
+			time.Sleep(time.Millisecond)
+		}
+	}
+	none := func(got chan int, taken string) {
+		select {
+		case n := <-got:
+			t.Fatalf("%d was handed out while %s of 10 were taken", n, taken)
+		case <-time.After(20 * time.Millisecond):
+		}
+	}
+
+	b.take(6)
+	got := make(chan int, 2)
+	go func() { b.take(8); got <- 8 }()
+	queued(1)
+	// 3 would fit next to the 6, but the 8 asked first, so it waits behind it.
+	go func() { b.take(3); got <- 3 }()
+	queued(2)
+	none(got, "6")
+	b.give(6)
+	if n := <-got; n != 8 {
+		t.Fatalf("%d went first, want 8", n)
+	}
+	none(got, "8")
+	b.give(8)
+	if n := <-got; n != 3 {
+		t.Fatalf("got %d, want 3", n)
 	}
 }
