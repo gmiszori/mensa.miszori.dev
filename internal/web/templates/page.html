@@ -30,6 +30,8 @@
   <meta property="og:locale" content="{{if eq .Lang "de"}}de_CH{{else}}en_US{{end}}">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="/static/app.css?v={{.Version}}">
+  <!-- The text font: without this, its download only starts once the stylesheet is read. -->
+  <link rel="preload" href="/static/fonts/instrument-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <!-- Runs before anything is drawn: sets the visitor's language and theme. -->
   <script src="/static/boot.js?v={{.Version}}"></script>
   <script src="/static/app.js?v={{.Version}}" defer></script>
@@ -125,13 +127,15 @@
               <span class="dish-desc">{{.Description}}</span>
               <span class="dish-tags">{{if .Diet}}<span class="tag">{{.DietLabel}}</span>{{end}}</span>
             </summary>
-            <dl class="dish-detail">
+            <!-- Built by app.js the first time the dish opens (see addDetail), so the page
+                 doesn't build the details of every dish up front. -->
+            <template class="detail"><dl class="dish-detail">
               <dt>{{call $.B "allergens"}}</dt><dd>{{if .AllergenIDs}}{{.Allergens}}{{else}}{{call $.B "noAllergens"}}{{end}}</dd>
               <dd class="actions">
                 {{- if .Nutrition}}<button class="link" type="button" data-nutrition-toggle aria-expanded="false"><span class="when-closed">{{call $.B "allValues"}}</span><span class="when-open">{{call $.B "hideValues"}}</span></button>
                 {{- else}}<span class="no-nutrition">{{call $.B "noNutrition"}}</span>{{end -}}
                 <button class="chip small" type="button" data-star aria-pressed="false"><span class="star-off">☆ {{call $.B "star"}}</span><span class="star-on">★ {{call $.B "starred"}}</span></button></dd>
-            </dl>
+            </dl></template>
           </details>
         </li>
         {{end}}

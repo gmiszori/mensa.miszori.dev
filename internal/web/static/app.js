@@ -374,7 +374,8 @@
     for (const dish of dishes) {
       const on = isStarred(dish);
       dish.toggleAttribute('data-starred', on);
-      dish.querySelector('[data-star]').setAttribute('aria-pressed', String(on));
+      // Only dishes opened before have the button (see addDetail).
+      dish.querySelector('[data-star]')?.setAttribute('aria-pressed', String(on));
     }
   }
 
@@ -558,6 +559,7 @@
       setExpanded(closing, false);
     }
     if (opening) {
+      addDetail(opening);
       addSummary(opening);
       opening.open = true;
       setExpanded(opening, photoReady);
@@ -632,12 +634,39 @@
     requestAnimationFrame(step);
   }
 
+  // The large photo starts loading when a closed dish is first touched, not when the touch
+  // ends, so it is more often ready when the dish opens. A touch that turns into scrolling
+  // cancels the download, so scrolling past dishes doesn't download their photos.
+  grid.addEventListener('pointerdown', (e) => {
+    const details = e.target.closest('.dish summary')?.parentElement;
+    const photo = details?.querySelector('.photo');
+    if (!photo || details.open || photo.getAttribute('src')) return;
+    photo.src = photo.dataset.src;
+    const touch = new AbortController();
+    details.addEventListener('pointercancel', () => {
+      touch.abort();
+      if (!photo.complete && !details.open) photo.removeAttribute('src');
+    }, { signal: touch.signal });
+    details.addEventListener('pointerup', () => touch.abort(), { signal: touch.signal });
+  });
+
   grid.addEventListener('click', (e) => {
     const summary = e.target.closest('.dish summary');
     if (!summary) return;
     e.preventDefault(); // the browser would open it instantly; toggleDish animates instead
     toggleDish(summary.parentElement);
   });
+
+  // A dish's details (allergens, nutrition, its buttons) are in the page as a <template>, so
+  // the browser doesn't build them for every dish up front. They are built the first time the
+  // dish opens.
+  function addDetail(details) {
+    const template = details.querySelector(':scope > template.detail');
+    if (!template) return;
+    const detail = template.content.cloneNode(true);
+    detail.querySelector('[data-star]').setAttribute('aria-pressed', String(details.closest('.dish').hasAttribute('data-starred')));
+    template.replaceWith(detail);
+  }
 
   // ---------- nutrition ----------
   //
