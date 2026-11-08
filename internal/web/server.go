@@ -143,8 +143,9 @@ type pageData struct {
 	Allergens []option
 	Canteens  []canteenView
 	NoMenu    []canteenView
-	Footer    template.HTML
-	JSTexts   string // every interface text in both languages, as JSON, for app.js
+	Footer    template.HTML // where the menus come from
+	Updated   template.HTML // when they were last refreshed
+	JSTexts   string        // every interface text in both languages, as JSON, for app.js
 }
 
 type dayLink struct {
@@ -276,10 +277,11 @@ func (s *Server) buildPage(lang, requested, meal string, now time.Time) pageData
 		}
 		updated = latest.In(s.Zone).Format("02.01.2006 15:04")
 	}
+	p.Footer = tr("footer")
 	if updated == "" {
-		p.Footer = both(translate("en", "footer", texts["en"]["never"]), translate("de", "footer", texts["de"]["never"]))
+		p.Updated = both(translate("en", "updated", texts["en"]["never"]), translate("de", "updated", texts["de"]["never"]))
 	} else {
-		p.Footer = tr("footer", updated)
+		p.Updated = tr("updated", updated)
 	}
 
 	js, _ := json.Marshal(texts)

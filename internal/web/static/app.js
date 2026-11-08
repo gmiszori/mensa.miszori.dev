@@ -361,7 +361,7 @@
       for (const card of order) {
         const i = heights[0] <= heights[1] ? 0 : 1;
         columns[i].append(card);
-        if (!card.hidden) heights[i] += card.offsetHeight + 16; // 16: the gap between cards
+        if (!card.hidden) heights[i] += card.offsetHeight;
       }
     }
     if (focused && focused !== document.activeElement && grid.contains(focused)) focused.focus({ preventScroll: true });

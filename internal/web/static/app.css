@@ -177,15 +177,14 @@ button { cursor: pointer; }
 .notice strong { color: var(--text-muted); font-weight: 600; }
 .notice a { color: var(--text); font-weight: 600; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 
-/* ---------- Canteen cards ---------- */
-.canteens { display: grid; gap: 16px; padding: 16px 0 32px; }
-@media (min-width: 900px) { .canteens { grid-template-columns: 1fr 1fr; align-items: start; } }
-/* app.js fills two columns on wide screens, so short cards leave no gaps. */
-.canteens > .column { display: grid; gap: 16px; align-content: start; min-width: 0; }
-
-.canteen {
-  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md);
-  padding: 18px 18px 6px;
+/* ---------- Canteens ---------- */
+/* The canteens are separated by space alone. On wide screens app.js fills two columns, so short
+   canteens leave no gaps. */
+.canteens { display: grid; padding: 0 0 32px; }
+.canteen { padding: 16px 0; }
+@media (min-width: 900px) {
+  .canteens { grid-template-columns: 1fr 1fr; column-gap: 48px; padding-top: 4px; }
+  .canteens > .column { display: grid; align-content: start; min-width: 0; }
 }
 .canteen-head { display: flex; align-items: flex-start; gap: 8px; }
 .canteen-title { flex: 1; min-width: 0; }
@@ -287,14 +286,14 @@ details.expanded .dish-row.has-photo { grid-template-columns: 1fr auto; }
 .no-menu li { padding: 6px 0; border-top: 1px solid var(--line); }
 .empty { color: var(--text-sub); padding: 24px 0; text-align: center; }
 /* ---------- Placeholder cards while app.js applies the settings (see boot.js) ---------- */
-.skeletons { display: none; gap: 16px; padding: 16px 0 32px; }
+.skeletons { display: none; padding: 0 0 32px; }
 html.loading .skeletons { display: grid; }
 html.loading #canteens, html.loading #no-menu, html.loading #no-results,
 html.loading #starred-hits, html.loading #hidden-count { display: none; }
-@media (min-width: 900px) { .skeletons { grid-template-columns: 1fr 1fr; align-items: start; } }
-.skeleton-card {
-  background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md);
-  padding: 18px;
+/* Spaced like the canteens. */
+.skeleton-card { padding: 16px 0; }
+@media (min-width: 900px) {
+  .skeletons { grid-template-columns: 1fr 1fr; column-gap: 48px; padding-top: 4px; }
 }
 .sk {
   border-radius: var(--radius-xs);
@@ -318,7 +317,13 @@ html.loading #starred-hits, html.loading #hidden-count { display: none; }
   display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px 16px;
   padding-top: 18px; padding-bottom: 40px;
 }
+.nowrap { white-space: nowrap; }
 .endorse { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; white-space: nowrap; }
+/* On phones the text takes more than one line, so both parts are centred, one under the other. */
+@media (max-width: 699px) {
+  .footer-inner { flex-direction: column; text-align: center; }
+  .endorse { margin-left: 0; }
+}
 .endorse a { color: var(--text); font-weight: 600; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .endorse a:hover { text-decoration-thickness: 2px; }
 .privacy { color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
