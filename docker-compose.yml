@@ -20,14 +20,14 @@ services:
     build: .
     environment:
       DOMAIN: ${DOMAIN:-localhost} # for absolute links in link previews
-      GOMEMLIMIT: 1400MiB # free memory sooner when large photos near mem_limit
+      GOMEMLIMIT: 1800MiB # free memory sooner when large photos near mem_limit
     volumes:
       - data:/data
     read_only: true
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     restart: unless-stopped
-    mem_limit: 1536m # resizing photos peaked at about 1.2 GB (48 megapixels at a time); normal use is far below
+    mem_limit: 2g # resizing photos (72 megapixels at a time) needs the most; normal use is far below
     pids_limit: 100
     ulimits: &ulimits
       core: 0 # a crash leaves no copy of its memory on disk

@@ -61,12 +61,11 @@ const retryAfter = 5 * time.Minute
 // asks for dozens of photos at once; the rest wait their turn.
 const maxDownloads = 4
 
-// maxResizing is how many pixels may be decoded and resized at the same time: two of the
-// largest photos allowed, or three 12 megapixel phone photos. Without it, four of the largest
-// at once used up to 1.85 GB, over the container's memory limit; with it, 12 photos asked for
-// at once peaked at about 0.75 GB (24 megapixels) and 1.2 GB (12 megapixels, which need more
-// memory per pixel when tall).
-const maxResizing = 2 * maxPixels
+// maxResizing is how many pixels may be decoded and resized at the same time: three of the
+// largest photos allowed, or four phone photos (as many as are downloaded at a time). Without
+// it, four of the largest at once used up to 1.85 GB of memory; with it, 12 of the largest asked
+// for at once peaked at 1.75 GB in a container with the 2 GB limit of docker-compose.yml.
+const maxResizing = 3 * maxPixels
 
 var (
 	errNotAPhoto      = errors.New("image is a placeholder, not a photo")
@@ -278,7 +277,7 @@ func (h *Handler) fetch(url, key string) error {
 		return fmt.Errorf("photo %s: %dx%d is too large", url, config.Width, config.Height)
 	}
 	// Wait until there is room to decode and resize it (see maxResizing). A 16-bit image takes
-	// twice the memory once decoded, so it counts double: at 24 megapixels it is resized alone.
+	// twice the memory once decoded, so it counts double.
 	weight := pixels
 	switch config.ColorModel {
 	case color.RGBA64Model, color.NRGBA64Model, color.Gray16Model:

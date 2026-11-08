@@ -213,7 +213,7 @@ with a local certificate.
   after 5 minutes at the earliest.
 - **Size limits on photos.** A source's image may be at most 15 MB and 24 megapixels. Its size is
   checked before decoding, so one oversized image can't exhaust the memory. At most four photos
-  are downloaded at a time, each only once, and at most 48 megapixels are resized at a time (two
+  are downloaded at a time, each only once, and at most 72 megapixels are resized at a time (three
   of the largest photos), so photos arriving together can't either.
 - **No accounts, no personal data.** Nothing on the server can be changed from outside:
   refreshes run only on the timer. Responses from the sources are size-limited.
