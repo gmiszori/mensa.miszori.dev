@@ -184,8 +184,8 @@ sends `CDN-Cache-Control: max-age=60`). Cloudflare only keeps HTML pages when a 
 so: for requests with URI path equal to `/`, set *Eligible for cache*, Edge TTL *Use cache-control
 header if present*, and Browser TTL *Respect origin*, so browsers keep asking again.
 
-Logs: `docker compose logs -f`. Caddy writes one line per request. Docker keeps at most
-30 MB of logs per container.
+Logs: `docker compose logs -f`. Caddy writes one line per request, without the visitor's
+address or any request header. Docker keeps at most 30 MB of logs per container.
 To try the production setup locally, start the proxy first with `PUBLIC_BIND_IP=127.0.0.1` and
 `MENSA_DOMAIN=localhost` in its `.env`. Without a `.env` here, Caddy then serves https://localhost
 with a local certificate.
@@ -216,7 +216,8 @@ with a local certificate.
   are downloaded at a time, each only once, and at most 72 megapixels are resized at a time (three
   of the largest photos), so photos arriving together can't either.
 - **No accounts, no personal data.** Nothing on the server can be changed from outside:
-  refreshes run only on the timer. Responses from the sources are size-limited.
+  refreshes run only on the timer. Responses from the sources are size-limited. The logs leave
+  out visitors' addresses and all request headers, so nothing personal is stored.
 - **Locked-down containers.** The image holds only the program (distroless, about 20 MB). Both
   containers run as unprivileged users on a read-only filesystem with a memory limit, without
   Linux capabilities (Caddy keeps only the one to listen on ports 80 and 443), and can't gain
@@ -227,16 +228,13 @@ with a local certificate.
   header.
 - **HTTPS only.** Caddy redirects HTTP to HTTPS and sends HSTS, so browsers keep using HTTPS.
 - **Real addresses only from the proxy.** Caddy trusts the visitor address in a PROXY header only
-  from the proxy's fixed address (`172.31.250.2`), so another container can't fake one in the
-  logs.
+  from the proxy's fixed address (`172.31.250.2`), so another container can't fake one.
 - **Timeouts.** The server limits how long reading and writing a request may take. This stops
   slow clients from holding connections open.
 
-Keep the server and the images up to date. Caddy's access log contains visitors' IP addresses;
-Docker keeps only the last 30 MB of it, so state that in a privacy notice if you need one. ETH's
-API is called with the client id that ethz.ch itself uses. FOOD2050 is read from its website, so
-if the site changes, UZH menus stop updating while the tests still pass. Watch the logs for
-`FOOD2050 refresh failed`.
+Keep the server and the images up to date. ETH's API is called with the client id that ethz.ch
+itself uses. FOOD2050 is read from its website, so if the site changes, UZH menus stop updating
+while the tests still pass. Watch the logs for `FOOD2050 refresh failed`.
 
 ## License
 
