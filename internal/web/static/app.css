@@ -206,7 +206,7 @@ button { cursor: pointer; }
 
 .dishes { list-style: none; }
 .dish { border-top: 1px solid var(--line); }
-.dish:first-child { border-top: 0; }
+.dish:first-child, .dish.first-shown { border-top: 0; }
 /* A starred dish's green band and an opened dish's photo reach past the text by --bleed: on
    phones exactly to the screen's edges (the page's side margin), on wide screens a little into
    the margin and the gap between the columns. Any more would let the page move sideways. */
@@ -218,8 +218,8 @@ button { cursor: pointer; }
 /* Off-budget dishes, when the visitor chose to see them below the others. */
 .over-budget { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); padding: 14px 0 4px;
   border-top: 1px solid var(--line); }
-.over-budget:first-child { border-top: 0; padding-top: 4px; }
-.over-budget + .dish { border-top-color: transparent; }
+.over-budget.first-shown { border-top: 0; padding-top: 4px; }
+.dish.after-label { border-top-color: transparent; }
 .dish details > summary { list-style: none; cursor: pointer; }
 .dish details > summary::-webkit-details-marker { display: none; }
 .dish-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 10px 0; }

@@ -226,11 +226,14 @@
           if (active && ok) visibleDishes++;
         }
         list.querySelector(':scope > .over-budget').hidden = !overShown;
-        // The divider under a starred dish's band goes, also when hidden dishes sit between.
+        // The dividers go above the first shown item, under a starred dish's band and under the
+        // off-budget label, also when hidden dishes sit before or between them.
         let previous = null;
         for (const item of list.children) {
           if (item.hidden) continue;
+          item.classList.toggle('first-shown', previous === null);
           item.classList.toggle('after-starred', previous?.hasAttribute('data-starred') === true);
+          item.classList.toggle('after-label', previous?.classList.contains('over-budget') === true);
           previous = item;
         }
       }
